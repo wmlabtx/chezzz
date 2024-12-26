@@ -164,6 +164,9 @@ public partial class MainWindow : Window
                     break;
             }
 
+            await inputWriter.WriteLineAsync("setoption name UCI_LimitStrength value true");
+            await inputWriter.FlushAsync();
+
             await inputWriter.WriteLineAsync($"setoption name UCI_Elo value {_elo}");
             await inputWriter.FlushAsync();
 
