@@ -12,7 +12,7 @@ namespace Chezzz
             _elo = ConfigurationManager.AppSettings["Elo"];
             _timeout = ConfigurationManager.AppSettings["Timeout"];
             _threads = ConfigurationManager.AppSettings["Threads"];
-        }
+        } 
 
         private async void Advice_OnClick(object sender, RoutedEventArgs e)
         {
