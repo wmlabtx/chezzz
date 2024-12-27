@@ -137,7 +137,7 @@ public partial class MainWindow : Window
             var ranksFen = string.Join("/", fenParts);
 
             var turn = isWhite ? "w" : "b";
-            var fen = ranksFen + $" {turn} KQkq - 0 1";
+            var fen = ranksFen + $" {turn} - - 0 1";
 
             var stockfish = new Process {
                 StartInfo = new ProcessStartInfo {
@@ -207,6 +207,9 @@ public partial class MainWindow : Window
 
             if (!string.IsNullOrEmpty(bestMove)) {
                 _status?.Report("Best move: " + bestMove);
+            }
+            else {
+                _status?.Report("cannot find the best move");
             }
 
             inputWriter.Close();
