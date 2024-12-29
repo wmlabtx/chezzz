@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using System.ComponentModel;
+using System.Configuration;
 using System.Windows;
 
 namespace Chezzz
@@ -10,18 +11,29 @@ namespace Chezzz
             InitializeComponent();
             _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
             _elo = ConfigurationManager.AppSettings["Elo"];
-            _timeout = ConfigurationManager.AppSettings["Timeout"];
+            _depth = ConfigurationManager.AppSettings["Depth"];
             _threads = ConfigurationManager.AppSettings["Threads"];
+            _cancellationTokenSource = new CancellationTokenSource();
         } 
 
-        private async void Advice_OnClick(object sender, RoutedEventArgs e)
+        private void Advice_OnClick(object sender, RoutedEventArgs e)
         {
-            await AdviceAsync();
+            if (!_isRunning) {
+                StartBackgroundProcess();
+            }
+            else {
+                StopBackgroundProcess();
+            }
         }
 
         private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
             WindowLoaded();
+        }
+
+        private void MainWindow_OnClosing(object? sender, CancelEventArgs e)
+        {
+            StopBackgroundProcess();
         }
     }
 }

@@ -6,11 +6,10 @@
         xmlns:local="clr-namespace:Chezzz"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="MainWindow" Loaded="MainWindow_OnLoaded" Height="450" Width="800">
+        Title="MainWindow" Loaded="MainWindow_OnLoaded" Closing="MainWindow_OnClosing" Height="450" Width="800">
     <DockPanel LastChildFill="true">
         <Menu Name="Menu" DockPanel.Dock="Top">
             <MenuItem  Header="File">
-                <MenuItem Header="Advice" Click="Advice_OnClick" />
                 <MenuItem Header="Exit" />
             </MenuItem>
         </Menu>
@@ -19,16 +18,20 @@
                 <ItemsPanelTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
-            <StatusBarItem>
+            <StatusBarItem Grid.Column="0">
+                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True">Advice</Button>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="1">
                 <TextBlock Name="Status" />
             </StatusBarItem>
-            <StatusBarItem Grid.Column="1" HorizontalAlignment="Right">
+            <StatusBarItem Grid.Column="2" HorizontalAlignment="Right">
                 <TextBlock Name="BackgroundStatus" Foreground="DarkGray" />
             </StatusBarItem>
         </StatusBar>
