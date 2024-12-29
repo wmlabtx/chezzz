@@ -217,6 +217,20 @@ public partial class MainWindow
                     var pars = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     if (pars.Length >= 2) {
                         eval = pars[2];
+                        if (eval.Equals("none")) {
+                            eval = "check";
+                        }
+                        else {
+                            if (!isWhite) {
+                                if (eval[0] == '+') {
+                                    eval = '-' + eval.Substring(1);
+                                }
+                                else {
+                                    eval = '+' + eval.Substring(1);
+                                }
+                            }
+                        }
+
                         break;
                     }
                 }
