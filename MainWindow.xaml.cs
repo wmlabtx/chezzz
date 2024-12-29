@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.Configuration;
+﻿using System.Configuration;
 using System.Windows;
 
 namespace Chezzz
@@ -9,31 +8,23 @@ namespace Chezzz
         public MainWindow()
         {
             InitializeComponent();
+        } 
+
+        private async void Advice_OnClick(object sender, RoutedEventArgs e)
+        {
             _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
             _elo = ConfigurationManager.AppSettings["Elo"];
             _depth = ConfigurationManager.AppSettings["Depth"];
             _threads = ConfigurationManager.AppSettings["Threads"];
-            _cancellationTokenSource = new CancellationTokenSource();
-        } 
 
-        private void Advice_OnClick(object sender, RoutedEventArgs e)
-        {
-            if (!_isRunning) {
-                StartBackgroundProcess();
-            }
-            else {
-                StopBackgroundProcess();
-            }
+            Advice.IsEnabled = false;
+            await AdviceAsync();
+            Advice.IsEnabled = true;
         }
 
         private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
             WindowLoaded();
-        }
-
-        private void MainWindow_OnClosing(object? sender, CancelEventArgs e)
-        {
-            StopBackgroundProcess();
         }
     }
 }
