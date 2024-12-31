@@ -25,6 +25,57 @@
                 <TextBlock Name="Status" />
             </StatusBarItem>
         </StatusBar>
+        <StackPanel DockPanel.Dock="Bottom" Background="DimGray">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border Name="ScoreBorder1" Grid.Column="0" Grid.Row="0" Background="Green" Margin="4,4,0,0" CornerRadius="10,0,0,10" Visibility="Collapsed">
+                    <Label Name="ScoreText1" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">+0.22</Label>
+                </Border>
+                <Border Name="ScoreBorder2"  Grid.Column="0" Grid.Row="1" Background="Gray" Margin = " 4 4 0 0" CornerRadius="10,0,0,10" Visibility="Collapsed">
+                    <Label Name="ScoreText2" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">-0.09</Label>
+                </Border>
+                <Border Name="ScoreBorder3" Grid.Column="0" Grid.Row="2" Background="Red" Margin ="4 4 0 4" CornerRadius="10,0,0,10" Visibility="Collapsed">
+                    <Label Name="ScoreText3" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">-M6</Label>
+                </Border>
+                <Border Name="WdlBorder1" Grid.Column="1" Grid.Row="0" Background="Green" Margin="2,4,4,0" CornerRadius="00,10,10,0" Visibility="Collapsed">
+                    <Label Name="WdlText1" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">win 100%</Label>
+                </Border>
+                <Border Name="WdlBorder2"  Grid.Column="1" Grid.Row="1" Background="Gray" Margin = "2,4,4,0" CornerRadius="0,10,10,0" Visibility="Collapsed">
+                    <Label Name="WdlText2" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">draw 69%</Label>
+                </Border>
+                <Border Name="WdlBorder3" Grid.Column="1" Grid.Row="2" Background="Red" Margin ="2 4 4 4" CornerRadius="0,10,10,0" Visibility="Collapsed">
+                    <Label Name="WdlText3" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">lose 30%</Label>
+                </Border>
+                <Border Name="BestMoveBorder1" Grid.Column="2" Grid.Row="0" Background="DimGray" Margin="2,4,4,0" CornerRadius="00,10,10,0" Visibility="Collapsed">
+                    <Label Name="BestMoveText1" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">c1g5</Label>
+                </Border>
+                <Border Name="BestMoveBorder2"  Grid.Column="2" Grid.Row="1" Background="DimGray" Margin = "2,4,4,0" CornerRadius="0,10,10,0" Visibility="Collapsed">
+                    <Label Name="BestMoveText2" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">f1c4</Label>
+                </Border>
+                <Border Name="BestMoveBorder3" Grid.Column="2" Grid.Row="2" Background="DimGray" Margin ="2 4 4 4" CornerRadius="0,10,10,0" Visibility="Collapsed">
+                    <Label Name="BestMoveText3" HorizontalAlignment="Center" Padding="4" Foreground="White" FontWeight="Bold">f2f3</Label>
+                </Border>
+                <Border Name="MoveBorder1" Grid.Column="3" Grid.Row="0" Background="DimGray" Margin="2,4,4,0" CornerRadius="00,10,10,0" Visibility="Collapsed">
+                    <Label Name="MoveText1" HorizontalAlignment="Left" Padding="4" Foreground="White">c1g5</Label>
+                </Border>
+                <Border Name="MoveBorder2" Grid.Column="3" Grid.Row="1" Background="DimGray" Margin = "2,4,4,0" CornerRadius="0,10,10,0" Visibility="Collapsed">
+                    <Label Name="MoveText2" HorizontalAlignment="Left" Padding="4" Foreground="White">f1c4</Label>
+                </Border>
+                <Border Name="MoveBorder3" Grid.Column="3" Grid.Row="2" Background="DimGray" Margin ="2 4 4 4" CornerRadius="0,10,10,0" Visibility="Collapsed">
+                    <Label Name="MoveText3" HorizontalAlignment="Left" Padding="4" Foreground="White">f2f3</Label>
+                </Border>
+            </Grid>
+        </StackPanel>
         <wv2:WebView2 Name="webView2" Source="https://www.chess.com"/>
     </DockPanel>
 </Window>
