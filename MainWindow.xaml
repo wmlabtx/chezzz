@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:chezzz="clr-namespace:Chezzz"
         mc:Ignorable="d"
         Title="MainWindow" Loaded="MainWindow_OnLoaded" Height="450" Width="800">
     <DockPanel LastChildFill="true">
@@ -14,16 +15,24 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
             <StatusBarItem Grid.Column="0">
-                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True">&#160;Advice&#160;</Button>
+                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True" Padding="6 0 6 0">Advice</Button>
             </StatusBarItem>
             <StatusBarItem Grid.Column="1">
                 <TextBlock Name="Status" />
             </StatusBarItem>
+            <StatusBarItem Grid.Column="2">
+                <ComboBox Name="Platform" SelectedIndex="0" SelectionChanged="Platform_SelectionChanged">
+                    <ComboBoxItem Content="{x:Static chezzz:AppConsts.CHESS}"/>
+                    <ComboBoxItem Content="{x:Static chezzz:AppConsts.LICHESS}" />
+                </ComboBox>
+            </StatusBarItem>
+
         </StatusBar>
         <StackPanel DockPanel.Dock="Bottom" Background="DimGray">
             <Grid>
@@ -76,6 +85,6 @@
                 </Border>
             </Grid>
         </StackPanel>
-        <wv2:WebView2 Name="webView2" Source="https://www.chess.com"/>
+        <wv2:WebView2 Name="WebBrowser" />
     </DockPanel>
 </Window>
