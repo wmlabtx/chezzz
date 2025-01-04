@@ -332,7 +332,7 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
         await inputWriter.FlushAsync();
 
-        await inputWriter.WriteLineAsync("setoption name MultiPV value 3");
+        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
         await inputWriter.FlushAsync();
 
         await inputWriter.WriteLineAsync("ucinewgame");
@@ -352,9 +352,20 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync($"go depth {_depth}");
         await inputWriter.FlushAsync();
 
+        var moves = new SortedList<string, Move>();
+        var status = string.Empty;
         while ((line = await outputReader.ReadLineAsync()) != null) {
             _status?.Report(line);
+            string[] parts;
             if (line.StartsWith("bestmove")) {
+                parts = line.Split(' ');
+                if (parts.Length > 1) {
+                    var suggestedMove = parts[1];
+                    status = moves.ContainsKey(suggestedMove) ? 
+                        $"[{_elo}] suggests {suggestedMove} | {moves[suggestedMove].Score} | {moves[suggestedMove].Forecast}" : 
+                        $"[{_elo}] suggests {suggestedMove}";
+                }
+
                 break;
             }
 
@@ -362,39 +373,37 @@ public partial class MainWindow
                 continue;
             }
 
-            var score = string.Empty;
-            var bestMove = string.Empty;
-            var move = string.Empty;
-            var win = string.Empty;
-            var wdl = new int[3];
-            SolidColorBrush colorScore;
-            var colorWdl = Brushes.Black;
-            var sb = new StringBuilder();
-            var parts = line.Split(' ');
-            var pvIndex = 0;
+            var move = new Move();
+            parts = line.Split(' ');
             for (var i = 0; i < parts.Length; i++) {
                 if (parts[i].Equals("multipv")) {
-                    pvIndex = int.Parse(parts[i + 1]) - 1;
+                    move.Index = int.Parse(parts[i + 1]) - 1;
                     continue;
                 }
 
                 if (parts[i].Equals("mate")) {
-                    score = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
+                    move.Score = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
                     continue;
                 }
 
                 if (parts[i].Equals("cp")) {
                     var cp = int.Parse(parts[i + 1]);
-                    score = cp < 0 ? $"-{Math.Abs(cp) / 100.0:F2}" : $"+{cp / 100.0:F2}";
+                    move.Score = cp < 0 ? $"-{Math.Abs(cp) / 100.0:F2}" : $"+{cp / 100.0:F2}";
+                    continue;
+                }
+
+                if (parts[i].Equals("depth")) {
+                    move.Depth = int.Parse(parts[i + 1]);
                     continue;
                 }
 
                 if (parts[i].Equals("wdl")) {
+                    var wdl = new int[3];
                     wdl[0] = int.Parse(parts[i + 1]);
                     wdl[1] = int.Parse(parts[i + 2]);
                     wdl[2] = int.Parse(parts[i + 3]);
                     var iwdl = Array.IndexOf(wdl, wdl.Max());
-                    colorWdl = iwdl switch {
+                    move.Color = iwdl switch {
                         0 => Brushes.Green,
                         1 => Brushes.Gray,
                         2 => Brushes.Red,
@@ -408,12 +417,12 @@ public partial class MainWindow
                         _ => "?"
                     };
 
-                    win = wdl[iwdl] >= 995 ? twdl : $"{twdl} {Math.Round(wdl[iwdl] / 10.0):F0}%";
-
+                    move.Forecast = wdl[iwdl] >= 995 ? twdl : $"{twdl} {Math.Round(wdl[iwdl] / 10.0):F0}%";
                 }
 
                 if (parts[i].Equals("pv")) {
-                    bestMove = parts[i + 1];
+                    move.FirstMove = parts[i + 1];
+                    var sb = new StringBuilder();
                     if (i + 2 < parts.Length) {
                         for (var j = i + 2; j < parts.Length; j++) {
                             sb.Append(parts[j]);
@@ -421,44 +430,43 @@ public partial class MainWindow
                         }
                     }
 
-                    move = sb.ToString();
+                    move.Moves = sb.ToString();
                 }
             }
 
-            if (score[1] == '0') {
-                colorScore = Brushes.Gray;
-            }
-            else if (score[0] == '-') {
-                colorScore = Brushes.Red;
-            }
-            else {
-                colorScore = Brushes.Green;
+            if (moves.Count > 0 && move.Depth > moves.Values[0].Depth) {
+                moves.Clear();
             }
 
-            if (string.IsNullOrEmpty(score)) {
-                _scoreBorder[pvIndex].Visibility = Visibility.Collapsed;
-                _wdlBorder[pvIndex].Visibility = Visibility.Collapsed;
-                _bestMoveBorder[pvIndex].Visibility = Visibility.Collapsed;
-                _moveBorder[pvIndex].Visibility = Visibility.Collapsed;
-            }
-            else {
-                _scoreBorder[pvIndex].Background = colorScore;
-                _scoreText[pvIndex].Content = score;
-                _scoreBorder[pvIndex].Visibility = Visibility.Visible;
+            moves[move.FirstMove] = move;
+            if (move.Index < 3) {
+                _scoreBorder[move.Index].Background = move.Color;
+                _scoreText[move.Index].Content = move.Score;
+                _scoreBorder[move.Index].Visibility = Visibility.Visible;
 
-                _wdlBorder[pvIndex].Background = colorWdl;
-                _wdlText[pvIndex].Content = win;
-                _wdlBorder[pvIndex].Visibility = Visibility.Visible;
+                _wdlBorder[move.Index].Background = move.Color;
+                _wdlText[move.Index].Content = move.Forecast;
+                _wdlBorder[move.Index].Visibility = Visibility.Visible;
 
-                _bestMoveText[pvIndex].Content = bestMove;
-                _bestMoveBorder[pvIndex].Visibility = Visibility.Visible;
+                _bestMoveText[move.Index].Content = move.FirstMove;
+                _bestMoveBorder[move.Index].Visibility = Visibility.Visible;
 
-                _moveText[pvIndex].Content = move;
-                _moveBorder[pvIndex].Visibility = Visibility.Visible;
+                _moveText[move.Index].Content = move.Moves;
+                _moveBorder[move.Index].Visibility = Visibility.Visible;
             }
         }
 
-        _status?.Report("Done");
+        if (moves.Count < 3) {
+            for (var i = moves.Count; i < 3; i++) {
+                _scoreBorder[i].Visibility = Visibility.Hidden;
+                _wdlBorder[i].Visibility = Visibility.Hidden;
+                _bestMoveBorder[i].Visibility = Visibility.Hidden;
+                _moveBorder[i].Visibility = Visibility.Hidden;
+            }
+        }
+
+        _status?.Report(status);
+
         inputWriter.Close();
         stockfish.Close();
     }
