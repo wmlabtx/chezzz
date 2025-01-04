@@ -29,10 +29,17 @@ We always start the dialogue with the '**uci**' command. The engine provides inf
 
 Once the settings are done, I send the '**ucinewgame**' command to indicate a new game. Next, we need to provide the position for analysis using '**position fen XXXX**', where XXXX is the encoded position in FEN format. Then, we ask the engine to accept it with the '**isready**' command. If everything is fine, the engine will respond with '**readyok**'. With the '**eval**' command, I get an approximate evaluation of the position (if it's positive, we have an advantage). After that, we just need to start the analysis with the '**go**' command and parameters (there are many – thinking time, search depth, number of positions to analyze, etc.). The engine then starts analyzing variations (outputting a lot of interesting information to the console, such as the evaluation of the current position), and it ends with the '**bestmove XXXX**' message (the best move found). This is the move I will show in the status bar. Then, the thread and child process can be closed.
 
-I started exploring Stockfish’s features and added the display of three move suggestions with evaluations ('**setoption name MultiPV value 3**').
+### Usage
 
-![estimation](https://github.com/user-attachments/assets/1a3c431b-52ff-41af-a051-11d3a2547e8e)
+To get a position evaluation, you need to click the 'Advice' button in the status bar during your move.
 
+![estimation-2](https://github.com/user-attachments/assets/8b7925c9-2957-4a3b-94f0-3a00d6cd68f8)
+
+The first option with an evaluation of -0.23 is the best move found in this position. The second option, -1.21, is slightly worse, and the third, -1.55, is worse than the second. In the status bar, a move with an evaluation of -1.87 is shown, which a player with an Elo rating of 1500 would likely choose. It is worse than the top three options and corresponds to the required level of play. The level of play is set in the App.config file.
+
+```xml
+<add key="Elo" value="1500"/>
+```
 ### Links
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
