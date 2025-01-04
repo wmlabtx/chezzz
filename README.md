@@ -40,6 +40,9 @@ The first option with an evaluation of -0.23 is the best move found in this posi
 ```xml
 <add key="Elo" value="1500"/>
 ```
+
+You can set rating values from 1320 to 3190. For an amateur, it is around 1400; for a master, around 2400; and for top players, including the world champion, it is around 2800.
+
 ### Links
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
