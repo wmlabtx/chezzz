@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,19 +9,16 @@ namespace Chezzz;
 public partial class MainWindow
 {
     private readonly IProgress<string>? _status;
-    private readonly Border[] _scoreBorder;
-    private readonly Border[] _wdlBorder;
-    private readonly Border[] _bestMoveBorder;
-    private readonly Border[] _moveBorder;
-    private readonly Label[] _scoreText;
-    private readonly Label[] _wdlText;
-    private readonly Label[] _bestMoveText;
-    private readonly Label[] _moveText;
+    private readonly List<Border> _scoreBorders = new();
+    private readonly List<Border> _wdlBorders = new();
+    private readonly List<Border> _bestMoveBorders = new();
+    private readonly List<Label> _scoreTexts = new();
+    private readonly List<Label> _wdlTexts = new();
+    private readonly List<Label> _bestMoveTexts = new();
+
+    private const int MoveMaxCount = 3 ;
 
     private string? _stockfishPath;
-    private string? _elo;
-    private string? _depth;
-    private string? _threads;
 
     private void WindowLoaded()
     {
@@ -34,6 +30,86 @@ public partial class MainWindow
         Height = SystemParameters.WorkArea.Height - margin * 2;
         Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - margin - Width) / 2;
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
+
+        var index = 0;
+        for (var col = 0; col < 3 * MoveMaxCount; col += 3) {
+            var scoreBorder = new Border {
+                Name = $"ScoreBorder{index}",
+                Background = Brushes.Green,
+                Margin = new Thickness(10, 4, 0, 4),
+                CornerRadius = new CornerRadius(10, 0, 0, 10),
+                Visibility = Visibility.Hidden
+            };
+            scoreBorder.SetValue(Grid.ColumnProperty, col);
+            scoreBorder.SetValue(Grid.RowProperty, 0);
+            MovesGrid.Children.Add(scoreBorder);
+            _scoreBorders.Add(scoreBorder);
+
+            var scoreText = new Label {
+                Name = $"ScoreText{index}",
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(4),
+                Foreground = Brushes.White,
+                /*FontWeight = FontWeights.Bold,*/
+                Content = "+0.22"
+            };
+            scoreBorder.Child = scoreText;
+            _scoreTexts.Add(scoreText);
+
+            var wdlBorder = new Border {
+                Name = $"WdlBorder{index}",
+                Background = Brushes.Green,
+                Margin = new Thickness(2, 4, 0, 4),
+                Visibility = Visibility.Hidden
+            };
+            wdlBorder.SetValue(Grid.ColumnProperty, col + 1);
+            wdlBorder.SetValue(Grid.RowProperty, 0);
+            MovesGrid.Children.Add(wdlBorder);
+            _wdlBorders.Add(wdlBorder);
+
+            var wdlText = new Label {
+                Name = $"WdlText{index}",
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(4),
+                Foreground = Brushes.White,
+                /*FontWeight = FontWeights.Bold,*/
+                Content = "win 100%"
+            };
+            wdlBorder.Child = wdlText;
+            _wdlTexts.Add(wdlText);
+
+            // add contour for best move border
+
+            var bestMoveBorder = new Border {
+                Name = $"BestMoveBorder{index}",
+                Background = Brushes.DimGray,
+                Margin = new Thickness(2, 4, 0, 4),
+                CornerRadius = new CornerRadius(0, 10, 10, 0),
+                BorderBrush = Brushes.Green,
+                BorderThickness = new Thickness(2),
+                Visibility = Visibility.Hidden
+            };
+            bestMoveBorder.SetValue(Grid.ColumnProperty, col + 2);
+            bestMoveBorder.SetValue(Grid.RowProperty, 0);
+            MovesGrid.Children.Add(bestMoveBorder);
+            _bestMoveBorders.Add(bestMoveBorder);
+
+            var bestMoveText = new Label {
+                Name = $"BestMoveText{index}",
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(4),
+                Foreground = Brushes.White,
+                /*FontWeight = FontWeights.Bold,*/
+                Content = "c1g5"
+            };
+            bestMoveBorder.Child = bestMoveText;
+            _bestMoveTexts.Add(bestMoveText);
+
+            index++;
+        }
 
         GotoPlatform();
     }
@@ -113,9 +189,10 @@ public partial class MainWindow
         return fen;
     }
 
-    private void GetFenFromChess(string decodedHtml, out string error, out string fen)
+    private void GetFenFromChess(string decodedHtml, out string error, out char[,] board, out string fen)
     {
         error = string.Empty;
+        board = new char[8, 8];
         fen = string.Empty;
         var isWhite = true;
         var match = ChessBoardRegex().Match(decodedHtml);
@@ -138,8 +215,6 @@ public partial class MainWindow
 
         var blockContent = blockMatch.Groups["block"].Value;
         var matches = DivRegex().Matches(blockContent);
-
-        var board = new char[8, 8];
 
         for (var r = 0; r < 8; r++)
             for (var c = 0; c < 8; c++)
@@ -186,13 +261,15 @@ public partial class MainWindow
         fen = GetFen(board, isWhite);
     }
 
-    private static void GetFenFromLiChess(string decodedHtml, out string error, out string fen)
+    private static void GetFenFromLiChess(string decodedHtml, out string error, out char[,] board, out string fen)
     {
         error = string.Empty;
+        board = new char[8, 8];
         fen = string.Empty;
 
         // <div class="cg-wrap orientation-white manipulable"><cg-container style="width: 736px; height: 736px;">
         // <div class="cg-wrap orientation-black manipulable"><cg-container style="width: 736px; height: 736px;">
+
         var isWhite = true;
         var regex = OrientationRegex();
         var m = regex.Match(decodedHtml);
@@ -234,7 +311,6 @@ public partial class MainWindow
             return;
         }
 
-        var board = new char[8, 8];
         for (var r = 0; r < 8; r++)
             for (var c = 0; c < 8; c++)
                 board[r, c] = '.';
@@ -257,7 +333,6 @@ public partial class MainWindow
                 _ => '.'
             };
 
-            
             var col = (int)Math.Round(int.Parse(rawX) / squareX);
             var row = (int)Math.Round(int.Parse(rawY) / squareY);
             if (!isWhite) {
@@ -282,12 +357,13 @@ public partial class MainWindow
 
         var error = string.Empty;
         var fen = string.Empty;
+        var board = new char[8, 8];
         switch (Platform.SelectionBoxItem) {
             case AppConsts.CHESS:
-                GetFenFromChess(decodedHtml, out error, out fen);
+                GetFenFromChess(decodedHtml, out error, out board, out fen);
                 break;
             case AppConsts.LICHESS:
-                GetFenFromLiChess(decodedHtml, out error, out fen);
+                GetFenFromLiChess(decodedHtml, out error, out board, out fen);
                 break;
         }
 
@@ -320,19 +396,16 @@ public partial class MainWindow
                 break;
         }
 
-        await inputWriter.WriteLineAsync("setoption name UCI_LimitStrength value true");
+        await inputWriter.WriteLineAsync("setoption name UCI_LimitStrength value false");
         await inputWriter.FlushAsync();
 
-        await inputWriter.WriteLineAsync($"setoption name UCI_Elo value {_elo}");
-        await inputWriter.FlushAsync();
-
-        await inputWriter.WriteLineAsync($"setoption name Threads value {_threads}");
+        await inputWriter.WriteLineAsync("setoption name Threads value 16");
         await inputWriter.FlushAsync();
 
         await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
         await inputWriter.FlushAsync();
 
-        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
+        await inputWriter.WriteLineAsync("setoption name MultiPV value 32");
         await inputWriter.FlushAsync();
 
         await inputWriter.WriteLineAsync("ucinewgame");
@@ -349,32 +422,24 @@ public partial class MainWindow
                 break;
         }
 
-        await inputWriter.WriteLineAsync($"go depth {_depth}");
+        await inputWriter.WriteLineAsync("go depth 16");
         await inputWriter.FlushAsync();
 
-        var moves = new SortedList<string, Move>();
-        var status = string.Empty;
+        var moves = new SortedList<int, Move>();
         while ((line = await outputReader.ReadLineAsync()) != null) {
-            _status?.Report(line);
-            string[] parts;
+            
             if (line.StartsWith("bestmove")) {
-                parts = line.Split(' ');
-                if (parts.Length > 1) {
-                    var suggestedMove = parts[1];
-                    status = moves.ContainsKey(suggestedMove) ? 
-                        $"[{_elo}] suggests {suggestedMove} | {moves[suggestedMove].Score} | {moves[suggestedMove].Forecast}" : 
-                        $"[{_elo}] suggests {suggestedMove}";
-                }
-
+                _status?.Report("Done");
                 break;
             }
 
+            _status?.Report(line);
             if (line.IndexOf(" multipv ", StringComparison.Ordinal) < 0) {
                 continue;
             }
 
             var move = new Move();
-            parts = line.Split(' ');
+            var parts = line.Split(' ');
             for (var i = 0; i < parts.Length; i++) {
                 if (parts[i].Equals("multipv")) {
                     move.Index = int.Parse(parts[i + 1]) - 1;
@@ -387,8 +452,8 @@ public partial class MainWindow
                 }
 
                 if (parts[i].Equals("cp")) {
-                    var cp = int.Parse(parts[i + 1]);
-                    move.Score = cp < 0 ? $"-{Math.Abs(cp) / 100.0:F2}" : $"+{cp / 100.0:F2}";
+                    move.ScoreI = int.Parse(parts[i + 1]);
+                    move.Score = move.ScoreI < 0 ? $"-{Math.Abs(move.ScoreI) / 100.0:F2}" : $"+{move.ScoreI / 100.0:F2}";
                     continue;
                 }
 
@@ -403,10 +468,17 @@ public partial class MainWindow
                     wdl[1] = int.Parse(parts[i + 2]);
                     wdl[2] = int.Parse(parts[i + 3]);
                     var iwdl = Array.IndexOf(wdl, wdl.Max());
-                    move.Color = iwdl switch {
+                    move.ScoreColor = iwdl switch {
                         0 => Brushes.Green,
                         1 => Brushes.Gray,
                         2 => Brushes.Red,
+                        _ => Brushes.Black
+                    };
+
+                    move.MoveColor = iwdl switch {
+                        0 => Brushes.DarkGreen,
+                        1 => Brushes.DimGray,
+                        2 => Brushes.DarkRed,
                         _ => Brushes.Black
                     };
 
@@ -422,52 +494,96 @@ public partial class MainWindow
 
                 if (parts[i].Equals("pv")) {
                     move.FirstMove = parts[i + 1];
-                    var sb = new StringBuilder();
-                    if (i + 2 < parts.Length) {
-                        for (var j = i + 2; j < parts.Length; j++) {
-                            sb.Append(parts[j]);
-                            sb.Append(' ');
-                        }
-                    }
+                    var col = move.FirstMove[0] - 'a';
+                    var row = '8' - move.FirstMove[1];
+                    var f = char.ToUpper(board[row, col]).ToString();
+                    var u = f switch {
+                        "P" => "",
+                        "N" => "\u265E ",
+                        "B" => "\u265D ",
+                        "R" => "\u265C ",
+                        "Q" => "\u265B ",
+                        "K" => "\u265A ",
+                        _ => f,
+                    };
 
-                    move.Moves = sb.ToString();
+                    move.FirstMove =  u + move.FirstMove;
                 }
             }
 
             if (moves.Count > 0 && move.Depth > moves.Values[0].Depth) {
+                ShowMoves(moves);
                 moves.Clear();
             }
 
-            moves[move.FirstMove] = move;
-            if (move.Index < 3) {
-                _scoreBorder[move.Index].Background = move.Color;
-                _scoreText[move.Index].Content = move.Score;
-                _scoreBorder[move.Index].Visibility = Visibility.Visible;
-
-                _wdlBorder[move.Index].Background = move.Color;
-                _wdlText[move.Index].Content = move.Forecast;
-                _wdlBorder[move.Index].Visibility = Visibility.Visible;
-
-                _bestMoveText[move.Index].Content = move.FirstMove;
-                _bestMoveBorder[move.Index].Visibility = Visibility.Visible;
-
-                _moveText[move.Index].Content = move.Moves;
-                _moveBorder[move.Index].Visibility = Visibility.Visible;
-            }
+            moves[move.Index] = move;
         }
 
-        if (moves.Count < 3) {
-            for (var i = moves.Count; i < 3; i++) {
-                _scoreBorder[i].Visibility = Visibility.Hidden;
-                _wdlBorder[i].Visibility = Visibility.Hidden;
-                _bestMoveBorder[i].Visibility = Visibility.Hidden;
-                _moveBorder[i].Visibility = Visibility.Hidden;
-            }
-        }
-
-        _status?.Report(status);
+        ShowMoves(moves);
 
         inputWriter.Close();
         stockfish.Close();
+    }
+
+    private void ShowMoves(SortedList<int, Move> allMoves)
+    {
+        var moves = allMoves.Values.ToList();
+        int i;
+        if (moves.Count > MoveMaxCount) {
+            i = 0;
+            while (i < moves.Count && moves[i].Forecast[0] != 'l') {
+                i++;
+            }
+
+            if (i >= MoveMaxCount) {
+                while (moves.Count > i) {
+                    moves.RemoveAt(moves.Count - 1);
+                }
+            }
+
+            while (moves.Count > MoveMaxCount) {
+                var mindiff = int.MaxValue;
+                var minindex = -1;
+                for (i = moves.Count - 2; i >= 0; i--) {
+                    var diff = moves[i].ScoreI - moves[i + 1].ScoreI;
+                    if (diff < mindiff) {
+                        mindiff = diff;
+                        minindex = i + 1;
+                        if (minindex == moves.Count - 1) {
+                            minindex = i;
+                        }
+
+                        if (mindiff == 0) {
+                            break;
+                        }
+                    }
+                }
+
+                moves.RemoveAt(minindex);
+            }
+        }
+
+        for (i = 0; i < moves.Count; i++) {
+            _scoreBorders[i].Background = moves[i].ScoreColor;
+            _scoreTexts[i].Content = moves[i].Score;
+            _scoreBorders[i].Visibility = Visibility.Visible;
+
+            _wdlBorders[i].Background = moves[i].ScoreColor;
+            _wdlTexts[i].Content = moves[i].Forecast;
+            _wdlBorders[i].Visibility = Visibility.Visible;
+
+            _bestMoveTexts[i].Content = moves[i].FirstMove;
+            _bestMoveBorders[i].Background = moves[i].MoveColor;
+            _bestMoveBorders[i].BorderBrush = moves[i].ScoreColor;
+            _bestMoveBorders[i].Visibility = Visibility.Visible;
+        }
+
+        if (moves.Count < MoveMaxCount) {
+            for (i = allMoves.Count; i < MoveMaxCount; i++) {
+                _scoreBorders[i].Visibility = Visibility.Hidden;
+                _wdlBorders[i].Visibility = Visibility.Hidden;
+                _bestMoveBorders[i].Visibility = Visibility.Hidden;
+            }
+        }
     }
 }

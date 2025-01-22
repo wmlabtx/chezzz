@@ -8,9 +8,10 @@ namespace Chezzz
         public string FirstMove { get; set; }
         public int Index { get; set; }
         public string Score { get; set; }
-        public SolidColorBrush Color { get; set; }
+        public int ScoreI { get; set; }
+        public SolidColorBrush ScoreColor { get; set; }
+        public SolidColorBrush MoveColor { get; set; }
         public string Forecast { get; set; }
-        public string Moves { get; set; }
 
         public Move()
         {
@@ -18,9 +19,10 @@ namespace Chezzz
             FirstMove = string.Empty;
             Index = -1;
             Score = string.Empty;
-            Color = Brushes.Black;
+            ScoreI = 0;
+            ScoreColor = Brushes.Black;
+            MoveColor = Brushes.Black;
             Forecast = string.Empty;
-            Moves = string.Empty;
         }
     }
 }
