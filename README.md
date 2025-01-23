@@ -49,6 +49,12 @@ You can set rating values from 1320 to 3190. For an amateur, it is around 1400; 
 
 I changed the way the output is displayed, making it more compact, and simplified the settings (it's no longer possible to select the Elo rating). Now, up to three options are presented in one line: the best move, an average move, and a poor move—though, whenever possible, not a completely losing one. By balancing between the three options, you can either play to win, steer the game toward a draw, or play at a level roughly equal to your opponent's.
 
+### Update 1/22/2025
+
+![image](https://github.com/user-attachments/assets/8e34887f-d712-47ba-91c6-d0c24e1c40e7)
+
+I changed the output format again. Now the 'advice' botton shows all possible moves divided into four categories: winning moves (green), moves that slightly improve the position, moves that slightly worsen the position (gray), and moves that lead to a loss (red). The categories are presented as dropdown lists and sorted in descending order of score. If a category is absent, the list is not displayed. This breakdown allows for smoother adjustment of the game's strength, adapting to the opponent's level, and evaluating any move you find interesting.
+
 ### Links
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
