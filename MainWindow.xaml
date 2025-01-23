@@ -32,38 +32,8 @@
                     <ComboBoxItem Content="{x:Static chezzz:AppConsts.LICHESS}" />
                 </ComboBox>
             </StatusBarItem>
-
         </StatusBar>
-        <StackPanel DockPanel.Dock="Bottom" Background="DimGray">
-            <Grid Name="MovesGrid">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-            </Grid>
-        </StackPanel>
+        <WrapPanel Name="Panel" DockPanel.Dock="Bottom" Background="DimGray" />
         <wv2:WebView2 Name="WebBrowser" />
     </DockPanel>
 </Window>

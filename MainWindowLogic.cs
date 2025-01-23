@@ -9,15 +9,6 @@ namespace Chezzz;
 public partial class MainWindow
 {
     private readonly IProgress<string>? _status;
-    private readonly List<Border> _scoreBorders = new();
-    private readonly List<Border> _wdlBorders = new();
-    private readonly List<Border> _bestMoveBorders = new();
-    private readonly List<Label> _scoreTexts = new();
-    private readonly List<Label> _wdlTexts = new();
-    private readonly List<Label> _bestMoveTexts = new();
-
-    private const int MoveMaxCount = 3 ;
-
     private string? _stockfishPath;
 
     private void WindowLoaded()
@@ -30,86 +21,6 @@ public partial class MainWindow
         Height = SystemParameters.WorkArea.Height - margin * 2;
         Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - margin - Width) / 2;
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
-
-        var index = 0;
-        for (var col = 0; col < 3 * MoveMaxCount; col += 3) {
-            var scoreBorder = new Border {
-                Name = $"ScoreBorder{index}",
-                Background = Brushes.Green,
-                Margin = new Thickness(10, 4, 0, 4),
-                CornerRadius = new CornerRadius(10, 0, 0, 10),
-                Visibility = Visibility.Hidden
-            };
-            scoreBorder.SetValue(Grid.ColumnProperty, col);
-            scoreBorder.SetValue(Grid.RowProperty, 0);
-            MovesGrid.Children.Add(scoreBorder);
-            _scoreBorders.Add(scoreBorder);
-
-            var scoreText = new Label {
-                Name = $"ScoreText{index}",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(4),
-                Foreground = Brushes.White,
-                /*FontWeight = FontWeights.Bold,*/
-                Content = "+0.22"
-            };
-            scoreBorder.Child = scoreText;
-            _scoreTexts.Add(scoreText);
-
-            var wdlBorder = new Border {
-                Name = $"WdlBorder{index}",
-                Background = Brushes.Green,
-                Margin = new Thickness(2, 4, 0, 4),
-                Visibility = Visibility.Hidden
-            };
-            wdlBorder.SetValue(Grid.ColumnProperty, col + 1);
-            wdlBorder.SetValue(Grid.RowProperty, 0);
-            MovesGrid.Children.Add(wdlBorder);
-            _wdlBorders.Add(wdlBorder);
-
-            var wdlText = new Label {
-                Name = $"WdlText{index}",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(4),
-                Foreground = Brushes.White,
-                /*FontWeight = FontWeights.Bold,*/
-                Content = "win 100%"
-            };
-            wdlBorder.Child = wdlText;
-            _wdlTexts.Add(wdlText);
-
-            // add contour for best move border
-
-            var bestMoveBorder = new Border {
-                Name = $"BestMoveBorder{index}",
-                Background = Brushes.DimGray,
-                Margin = new Thickness(2, 4, 0, 4),
-                CornerRadius = new CornerRadius(0, 10, 10, 0),
-                BorderBrush = Brushes.Green,
-                BorderThickness = new Thickness(2),
-                Visibility = Visibility.Hidden
-            };
-            bestMoveBorder.SetValue(Grid.ColumnProperty, col + 2);
-            bestMoveBorder.SetValue(Grid.RowProperty, 0);
-            MovesGrid.Children.Add(bestMoveBorder);
-            _bestMoveBorders.Add(bestMoveBorder);
-
-            var bestMoveText = new Label {
-                Name = $"BestMoveText{index}",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(4),
-                Foreground = Brushes.White,
-                /*FontWeight = FontWeights.Bold,*/
-                Content = "c1g5"
-            };
-            bestMoveBorder.Child = bestMoveText;
-            _bestMoveTexts.Add(bestMoveText);
-
-            index++;
-        }
 
         GotoPlatform();
     }
@@ -405,7 +316,7 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
         await inputWriter.FlushAsync();
 
-        await inputWriter.WriteLineAsync("setoption name MultiPV value 32");
+        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
         await inputWriter.FlushAsync();
 
         await inputWriter.WriteLineAsync("ucinewgame");
@@ -425,7 +336,7 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("go depth 16");
         await inputWriter.FlushAsync();
 
-        var moves = new SortedList<int, Move>();
+        var moves = new SortedList<string, Move>();
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
             if (line.StartsWith("bestmove")) {
@@ -441,12 +352,8 @@ public partial class MainWindow
             var move = new Move();
             var parts = line.Split(' ');
             for (var i = 0; i < parts.Length; i++) {
-                if (parts[i].Equals("multipv")) {
-                    move.Index = int.Parse(parts[i + 1]) - 1;
-                    continue;
-                }
-
                 if (parts[i].Equals("mate")) {
+                    move.ScoreI = parts[i + 1].StartsWith('-') ? int.MinValue : int.MaxValue;
                     move.Score = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
                     continue;
                 }
@@ -512,11 +419,10 @@ public partial class MainWindow
             }
 
             if (moves.Count > 0 && move.Depth > moves.Values[0].Depth) {
-                ShowMoves(moves);
                 moves.Clear();
             }
 
-            moves[move.Index] = move;
+            moves[move.FirstMove] = move;
         }
 
         ShowMoves(moves);
@@ -525,65 +431,95 @@ public partial class MainWindow
         stockfish.Close();
     }
 
-    private void ShowMoves(SortedList<int, Move> allMoves)
+    private void ShowMoves(SortedList<string, Move> allMoves)
     {
-        var moves = allMoves.Values.ToList();
-        int i;
-        if (moves.Count > MoveMaxCount) {
-            i = 0;
-            while (i < moves.Count && moves[i].Forecast[0] != 'l') {
-                i++;
-            }
+        var categories = new List<Move>[] { new(), new(), new(), new() };
+        foreach (var move in allMoves.Values) {
+            var category = move.Forecast[0] switch {
+                'w' => 0,
+                'l' => 3,
+                _ => move.ScoreI >= 0 ? 1 : 2
+            };
 
-            if (i >= MoveMaxCount) {
-                while (moves.Count > i) {
-                    moves.RemoveAt(moves.Count - 1);
-                }
-            }
-
-            while (moves.Count > MoveMaxCount) {
-                var mindiff = int.MaxValue;
-                var minindex = -1;
-                for (i = moves.Count - 2; i >= 0; i--) {
-                    var diff = moves[i].ScoreI - moves[i + 1].ScoreI;
-                    if (diff < mindiff) {
-                        mindiff = diff;
-                        minindex = i + 1;
-                        if (minindex == moves.Count - 1) {
-                            minindex = i;
-                        }
-
-                        if (mindiff == 0) {
-                            break;
-                        }
-                    }
-                }
-
-                moves.RemoveAt(minindex);
-            }
+            categories[category].Add(move);
         }
 
-        for (i = 0; i < moves.Count; i++) {
-            _scoreBorders[i].Background = moves[i].ScoreColor;
-            _scoreTexts[i].Content = moves[i].Score;
-            _scoreBorders[i].Visibility = Visibility.Visible;
-
-            _wdlBorders[i].Background = moves[i].ScoreColor;
-            _wdlTexts[i].Content = moves[i].Forecast;
-            _wdlBorders[i].Visibility = Visibility.Visible;
-
-            _bestMoveTexts[i].Content = moves[i].FirstMove;
-            _bestMoveBorders[i].Background = moves[i].MoveColor;
-            _bestMoveBorders[i].BorderBrush = moves[i].ScoreColor;
-            _bestMoveBorders[i].Visibility = Visibility.Visible;
+        foreach (var t in categories) {
+            t.Sort((a, b) => b.ScoreI.CompareTo(a.ScoreI));
         }
 
-        if (moves.Count < MoveMaxCount) {
-            for (i = allMoves.Count; i < MoveMaxCount; i++) {
-                _scoreBorders[i].Visibility = Visibility.Hidden;
-                _wdlBorders[i].Visibility = Visibility.Hidden;
-                _bestMoveBorders[i].Visibility = Visibility.Hidden;
+        Panel.Children.Clear();
+        foreach (var category in categories) {
+            if (category.Count == 0) {
+                continue;
             }
-        }
+
+            var comboBox = new ComboBox {
+                Margin = new Thickness(2, 2, 0, 2),
+                SelectedIndex = 0
+            };
+
+            foreach (var move in category) {
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                var scoreBorder = new Border {
+                    Background = move.ScoreColor,
+                    CornerRadius = new CornerRadius(4, 0, 0, 4)
+                };
+                scoreBorder.SetValue(Grid.ColumnProperty, 0);
+                grid.Children.Add(scoreBorder);
+
+                var scoreText = new Label {
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Padding = new Thickness(10,2,0,2),
+                    Foreground = Brushes.White,
+                    Content = move.Score
+                };
+                scoreBorder.Child = scoreText;
+
+                var wdlBorder = new Border {
+                    Background = move.ScoreColor,
+                };
+                wdlBorder.SetValue(Grid.ColumnProperty, 1);
+                grid.Children.Add(wdlBorder);
+
+                var wdlText = new Label {
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Padding = new Thickness(10, 2, 10, 2),
+                    Foreground = Brushes.White,
+                    Content = move.Forecast
+                };
+                wdlBorder.Child = wdlText;
+
+                var bestMoveBorder = new Border {
+                    Background = move.MoveColor,
+                    CornerRadius = new CornerRadius(0, 4, 4, 0)
+                };
+                bestMoveBorder.SetValue(Grid.ColumnProperty, 2);
+                grid.Children.Add(bestMoveBorder);
+
+                var bestMoveText = new Label {
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Padding = new Thickness(10, 2, 10, 2),
+                    Foreground = Brushes.White,
+                    Content = move.FirstMove
+                };
+                bestMoveBorder.Child = bestMoveText;
+
+                var comboBoxItem = new ComboBoxItem {
+                    Content = grid
+                };
+
+                comboBox.Items.Add(comboBoxItem);
+            }
+
+            Panel.Children.Add(comboBox);
+        } 
     }
 }

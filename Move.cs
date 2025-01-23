@@ -6,7 +6,6 @@ namespace Chezzz
     {
         public int Depth { get; set; }
         public string FirstMove { get; set; }
-        public int Index { get; set; }
         public string Score { get; set; }
         public int ScoreI { get; set; }
         public SolidColorBrush ScoreColor { get; set; }
@@ -17,7 +16,6 @@ namespace Chezzz
         {
             Depth = -1;
             FirstMove = string.Empty;
-            Index = -1;
             Score = string.Empty;
             ScoreI = 0;
             ScoreColor = Brushes.Black;
