@@ -1,6 +1,6 @@
 ### Introduction
-![header-github-3](https://github.com/user-attachments/assets/59ab55ad-4ad0-4a12-ad2a-9deb080bdd72)
 
+![github-780x440-preview](https://github.com/user-attachments/assets/1f9ce219-ee2b-408c-8760-b95c9c70c230)
 
 I really love playing chess. I've been playing 10-minute games on chess.com for a long time. But my rating is stuck around 1500. And it's all because I often 'blunder'. What if there was an advisor nearby, helping me avoid those silly blunders... What if I could integrate a chess engine to give suggestions in tough positions? It's not fair play, but using bots of any rating for training is allowed. So the idea is to set up the engine, somehow read the chess position from the browser, send it to the engine, and get a response in a reasonable time.
 
@@ -33,7 +33,29 @@ Once the settings are done, I send the '**ucinewgame**' command to indicate a ne
 
 To get a position evaluation, you need to click the 'Advice' button in the status bar during your move.
 
-![estimation-2](https://github.com/user-attachments/assets/8b7925c9-2957-4a3b-94f0-3a00d6cd68f8)
+![0124-1](https://github.com/user-attachments/assets/92f8dd38-25c8-4902-82ba-bf189902a4b3)
+
+By default, the best move found in the current position is recommended (on the left). Other possible moves are displayed as colored bars. The better the move, the greener it is. Neutral moves are gray. Moves that worsen the position are red (they are on the right). You can hover the mouse over any move.
+
+![0124-2](https://github.com/user-attachments/assets/460d000e-cee5-47ab-afdd-f66f0f817a6e)
+
+The worst moves, which lead to checkmate, are colored in maroon.
+
+![0124-3](https://github.com/user-attachments/assets/4c2c0cbb-b15a-456d-8510-d686c8713a18)
+
+You can not only hover the mouse cursor but also click on any move.
+
+![0124-4](https://github.com/user-attachments/assets/4efbed3c-c5a9-4276-8850-e318344b8b67)
+
+It will look like this:
+
+![0124-5](https://github.com/user-attachments/assets/6f30eccf-ccee-4185-908c-a14899d79f36)
+
+The advisor remembers the evaluation of the move (in this case, -0.34) and from that point on will recommend moves close to that evaluation. This mechanism allows you to adjust the strength of play. That is, to play at roughly the same level as your opponent. Or stronger, or weaker — depending on which moves you click.
+
+
+
+
 
 The first option with an evaluation of -0.23 is the best move found in this position. The second option, -1.21, is slightly worse, and the third, -1.55, is worse than the second. In the status bar, a move with an evaluation of -1.87 is shown, which a player with an Elo rating of 1500 would likely choose. It is worse than the top three options and corresponds to the required level of play. The level of play is set in the App.config file.
 
@@ -46,6 +68,7 @@ You can set rating values from 1320 to 3190. For an amateur, it is around 1400; 
 ### Update 1/21/2025
 
 ![image](https://github.com/user-attachments/assets/ad306d72-63e4-4c08-9592-ee9ec8c62101)
+
 
 I changed the way the output is displayed, making it more compact, and simplified the settings (it's no longer possible to select the Elo rating). Now, up to three options are presented in one line: the best move, an average move, and a poor move—though, whenever possible, not a completely losing one. By balancing between the three options, you can either play to win, steer the game toward a draw, or play at a level roughly equal to your opponent's.
 
