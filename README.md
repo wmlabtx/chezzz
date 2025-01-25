@@ -53,17 +53,23 @@ It will look like this:
 
 The advisor remembers the evaluation of the move (in this case, -0.34) and from that point on will recommend moves close to that evaluation. This mechanism allows you to adjust the strength of play. That is, to play at roughly the same level as your opponent. Or stronger, or weaker — depending on which moves you click.
 
+The advisor supports both popular chess websites. You can switch between them at any time.
 
+![0124-8](https://github.com/user-attachments/assets/b76ccd3e-774b-4207-8470-babc7be6a4b0)
 
+You can play either anonymously or in your account. All modes are supported—playing against people, bots, solving puzzles, and studies.
 
+### Configuring
 
-The first option with an evaluation of -0.23 is the best move found in this position. The second option, -1.21, is slightly worse, and the third, -1.55, is worse than the second. In the status bar, a move with an evaluation of -1.87 is shown, which a player with an Elo rating of 1500 would likely choose. It is worse than the top three options and corresponds to the required level of play. The level of play is set in the App.config file.
+The advisor itself is a portable application. It can be downloaded from **Releases** and unpacked into any folder. However, it requires Stockfish to work. Stockfish is free; download it from [here](https://stockfishchess.org/download/), place it in any folder (you can put it directly in the advisor's folder), and specify the full path to it in the **App.config** file
 
 ```xml
-<add key="Elo" value="1500"/>
+<configuration>
+	<appSettings>
+		<add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
+	</appSettings>
+</configuration>
 ```
-
-You can set rating values from 1320 to 3190. For an amateur, it is around 1400; for a master, around 2400; and for top players, including the world champion, it is around 2800.
 
 ### Update 1/21/2025
 
