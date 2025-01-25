@@ -95,6 +95,8 @@ I changed the output format again. Now the 'advice' botton shows all possible mo
 
 ![image](https://github.com/user-attachments/assets/8e34887f-d712-47ba-91c6-d0c24e1c40e7)
 
+I also experimented with user controls that allowed scrolling through the list of possible moves, but found this option cumbersome and unsuccessful. Eventually, I arrived at the current version, which shows all possible moves and remembers the playing level.
+
 ### Links
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
