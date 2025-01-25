@@ -1,4 +1,5 @@
 ﻿using System.Configuration;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -11,6 +12,10 @@ namespace Chezzz
             InitializeComponent();
 
             _status = new Progress<string>(message => Status.Text = message);
+            _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
+            if (!File.Exists(_stockfishPath)) {
+                _status?.Report($"{_stockfishPath} not found");
+            }
         }
 
         private void GotoPlatform()
@@ -33,7 +38,9 @@ namespace Chezzz
 
         private async void Advice_OnClick(object sender, RoutedEventArgs e)
         {
-            _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
+            if (!File.Exists(_stockfishPath)) {
+                _status?.Report($"{_stockfishPath} not found");
+            }
 
             Advice.IsEnabled = false;
             await AdviceAsync();

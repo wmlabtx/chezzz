@@ -2,14 +2,20 @@
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Chezzz;
 
 public partial class MainWindow
 {
+    private const int POSITIVE_MATE = 10000;
+    private const int NEGATIVE_MATE = -10000;
+
     private readonly IProgress<string>? _status;
-    private string? _stockfishPath;
+    private readonly string? _stockfishPath;
+    private readonly SortedList<int, Move> _moves = new();
+    private int _preferableScoreValue = POSITIVE_MATE;
 
     private void WindowLoaded()
     {
@@ -336,7 +342,7 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("go depth 16");
         await inputWriter.FlushAsync();
 
-        var moves = new SortedList<string, Move>();
+        _moves.Clear();
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
             if (line.StartsWith("bestmove")) {
@@ -352,15 +358,20 @@ public partial class MainWindow
             var move = new Move();
             var parts = line.Split(' ');
             for (var i = 0; i < parts.Length; i++) {
+                if (parts[i].Equals("multipv")) {
+                    move.Index = int.Parse(parts[i + 1]) - 1;
+                    continue;
+                }
+
                 if (parts[i].Equals("mate")) {
-                    move.ScoreI = parts[i + 1].StartsWith('-') ? int.MinValue : int.MaxValue;
-                    move.Score = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
+                    move.ScoreValue = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
+                    move.ScoreText = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
                     continue;
                 }
 
                 if (parts[i].Equals("cp")) {
-                    move.ScoreI = int.Parse(parts[i + 1]);
-                    move.Score = move.ScoreI < 0 ? $"-{Math.Abs(move.ScoreI) / 100.0:F2}" : $"+{move.ScoreI / 100.0:F2}";
+                    move.ScoreValue = int.Parse(parts[i + 1]);
+                    move.ScoreText = move.ScoreValue < 0 ? $"-{Math.Abs(move.ScoreValue) / 100.0:F2}" : $"+{move.ScoreValue / 100.0:F2}";
                     continue;
                 }
 
@@ -375,20 +386,6 @@ public partial class MainWindow
                     wdl[1] = int.Parse(parts[i + 2]);
                     wdl[2] = int.Parse(parts[i + 3]);
                     var iwdl = Array.IndexOf(wdl, wdl.Max());
-                    move.ScoreColor = iwdl switch {
-                        0 => Brushes.Green,
-                        1 => Brushes.Gray,
-                        2 => Brushes.Red,
-                        _ => Brushes.Black
-                    };
-
-                    move.MoveColor = iwdl switch {
-                        0 => Brushes.DarkGreen,
-                        1 => Brushes.DimGray,
-                        2 => Brushes.DarkRed,
-                        _ => Brushes.Black
-                    };
-
                     var twdl = iwdl switch {
                         0 => "win",
                         1 => "draw",
@@ -418,108 +415,179 @@ public partial class MainWindow
                 }
             }
 
-            if (moves.Count > 0 && move.Depth > moves.Values[0].Depth) {
-                moves.Clear();
+            if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
+                _moves.Clear();
             }
 
-            moves[move.FirstMove] = move;
+            _moves[move.Index] = move;
         }
-
-        ShowMoves(moves);
 
         inputWriter.Close();
         stockfish.Close();
+
+        ShowMoves(_preferableScoreValue);
     }
 
-    private void ShowMoves(SortedList<string, Move> allMoves)
+    private static Color DarkenColor(Color color, double factor)
     {
-        var categories = new List<Move>[] { new(), new(), new(), new() };
-        foreach (var move in allMoves.Values) {
-            var category = move.Forecast[0] switch {
-                'w' => 0,
-                'l' => 3,
-                _ => move.ScoreI >= 0 ? 1 : 2
-            };
+        factor = Math.Max(0, Math.Min(1, factor));
+        var r = (byte)(color.R * (1 - factor));
+        var g = (byte)(color.G * (1 - factor));
+        var b = (byte)(color.B * (1 - factor));
+        return Color.FromRgb(r, g, b);
+    }
 
-            categories[category].Add(move);
+    private static Color LigthenColor(Color color, double factor)
+    {
+        factor = Math.Max(0, Math.Min(1, factor));
+        var r = (byte)((255-color.R) * factor + color.R);
+        var g = (byte)((255 - color.G) * factor + color.G);
+        var b = (byte)((255 - color.B) * factor + color.B);
+        return Color.FromRgb(r, g, b);
+    }
+
+    private static Color InterpolateColor(Color color1, Color color2, double factor)
+    {
+        factor = Math.Max(0, Math.Min(1, factor));
+        var a = (byte)(color1.A + (color2.A - color1.A) * factor);
+        var r = (byte)(color1.R + (color2.R - color1.R) * factor);
+        var g = (byte)(color1.G + (color2.G - color1.G) * factor);
+        var b = (byte)(color1.B + (color2.B - color1.B) * factor);
+        return Color.FromArgb(a, r, g, b);
+    }
+
+    private static Color GetColor(Move move, int minScoreNegative, int maxScorePositive)
+    {
+        switch (move.ScoreValue) {
+            case NEGATIVE_MATE:
+                return Colors.DarkRed;
+            case POSITIVE_MATE:
+                return Colors.DarkGreen;
         }
 
-        foreach (var t in categories) {
-            t.Sort((a, b) => b.ScoreI.CompareTo(a.ScoreI));
+        double normalizedValue;
+        if (minScoreNegative == 0) {
+            minScoreNegative = Math.Min(-1000, move.ScoreValue);
         }
+
+        if (move.ScoreValue <= 0) {
+            normalizedValue = (double)move.ScoreValue / minScoreNegative;
+            return InterpolateColor(Colors.Gray, Colors.Red, normalizedValue);
+        }
+
+        if (maxScorePositive == 0) {
+            maxScorePositive = Math.Max(1000, move.ScoreValue);
+        }
+
+        normalizedValue = (double)move.ScoreValue / maxScorePositive;
+        return InterpolateColor(Colors.Gray, Colors.Green, normalizedValue);
+    }
+
+    private void ShowMoves(int preferableScoreValue)
+    {
+        _preferableScoreValue = preferableScoreValue;
 
         Panel.Children.Clear();
-        foreach (var category in categories) {
-            if (category.Count == 0) {
-                continue;
-            }
 
-            var comboBox = new ComboBox {
-                Margin = new Thickness(2, 2, 0, 2),
-                SelectedIndex = 0
+        var labelIndex = 0;
+        var diffMin = int.MaxValue;
+        var moves = _moves.Values.OrderByDescending(move => move.ScoreValue).ToArray();
+        foreach (var move in moves) {
+            var diff = Math.Abs(move.ScoreValue - _preferableScoreValue);
+            if (diff < diffMin) {
+                diffMin = diff;
+                labelIndex = move.Index;
+            }
+        }
+
+        var minScoreNegative = NEGATIVE_MATE;
+        var notmates = _moves.Values.Where(move => move.ScoreValue <= 0 && move.ScoreValue != NEGATIVE_MATE).ToArray();
+        if (notmates.Length > 0) {
+            minScoreNegative = notmates.Min(move => move.ScoreValue);
+        }
+
+        var maxScorePositive = POSITIVE_MATE;
+        notmates = _moves.Values.Where(move => move.ScoreValue >= 0 && move.ScoreValue != POSITIVE_MATE).ToArray();
+        if (notmates.Length > 0) {
+            maxScorePositive = notmates.Max(move => move.ScoreValue);
+        }
+
+        foreach (var move in moves) {
+            var color = GetColor(move, minScoreNegative, maxScorePositive);
+            var darkenColor = DarkenColor(color, 0.5);
+            var ligthenColor = LigthenColor(color, 0.5);
+            var gradient = new LinearGradientBrush {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(0, 1),
+                GradientStops = {
+                    new GradientStop(ligthenColor, 0),
+                    new GradientStop(color, 0.4),
+                    new GradientStop(darkenColor, 0.8),
+                    new GradientStop(darkenColor, 1)
+                }
             };
 
-            foreach (var move in category) {
-                var grid = new Grid();
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-                var scoreBorder = new Border {
-                    Background = move.ScoreColor,
-                    CornerRadius = new CornerRadius(4, 0, 0, 4)
-                };
-                scoreBorder.SetValue(Grid.ColumnProperty, 0);
-                grid.Children.Add(scoreBorder);
+            var scoreTextBlock = new TextBlock {
+                Text = move.ScoreText,
+                Foreground = Brushes.White,
+                Padding = new Thickness(4, 0, 0, 0)
+            };
 
-                var scoreText = new Label {
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Padding = new Thickness(10,2,0,2),
-                    Foreground = Brushes.White,
-                    Content = move.Score
-                };
-                scoreBorder.Child = scoreText;
+            var wdlTextBlock = new TextBlock {
+                Text = move.Forecast,
+                Foreground = Brushes.White,
+                Padding = new Thickness(4, 0, 4, 0)
+            };
 
-                var wdlBorder = new Border {
-                    Background = move.ScoreColor,
-                };
-                wdlBorder.SetValue(Grid.ColumnProperty, 1);
-                grid.Children.Add(wdlBorder);
+            var firstmoveTextBlock = new TextBlock {
+                Text = move.FirstMove,
+                Foreground = Brushes.White,
+                Padding = new Thickness(4, 0, 4, 0)
+            };
 
-                var wdlText = new Label {
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Padding = new Thickness(10, 2, 10, 2),
-                    Foreground = Brushes.White,
-                    Content = move.Forecast
-                };
-                wdlBorder.Child = wdlText;
+            scoreTextBlock.SetValue(Grid.ColumnProperty, 0);
+            wdlTextBlock.SetValue(Grid.ColumnProperty, 1);
+            firstmoveTextBlock.SetValue(Grid.ColumnProperty, 2);
 
-                var bestMoveBorder = new Border {
-                    Background = move.MoveColor,
-                    CornerRadius = new CornerRadius(0, 4, 4, 0)
-                };
-                bestMoveBorder.SetValue(Grid.ColumnProperty, 2);
-                grid.Children.Add(bestMoveBorder);
+            grid.Children.Add(scoreTextBlock);
+            grid.Children.Add(wdlTextBlock);
+            grid.Children.Add(firstmoveTextBlock);
 
-                var bestMoveText = new Label {
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Padding = new Thickness(10, 2, 10, 2),
-                    Foreground = Brushes.White,
-                    Content = move.FirstMove
-                };
-                bestMoveBorder.Child = bestMoveText;
+            var moveLabel = new Label {
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(color),
+                Content = grid,
+                Background = gradient,
+            };
 
-                var comboBoxItem = new ComboBoxItem {
-                    Content = grid
-                };
-
-                comboBox.Items.Add(comboBoxItem);
+            if (move.Index == labelIndex) {
+                Panel.Children.Add(moveLabel);
             }
+            else {
+                var moveButton = new Button {
+                    BorderThickness = new Thickness(1),
+                    BorderBrush = new SolidColorBrush(color),
+                    Background = gradient,
+                    Width = 8,
+                    Cursor = Cursors.Hand,
+                    Tag = move,
+                    ToolTip = moveLabel
+                };
 
-            Panel.Children.Add(comboBox);
-        } 
+                moveButton.Click += (sender, e) => {
+                    var buttonSender = (Button)sender;
+                    var moveSender = (Move)buttonSender.Tag;
+                    ShowMoves(moveSender.ScoreValue);
+                };
+
+                ToolTipService.SetInitialShowDelay(moveButton, 0);
+                Panel.Children.Add(moveButton);
+            }
+        }
     }
 }

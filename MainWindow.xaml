@@ -33,7 +33,36 @@
                 </ComboBox>
             </StatusBarItem>
         </StatusBar>
-        <WrapPanel Name="Panel" DockPanel.Dock="Bottom" Background="DimGray" />
+
+        <WrapPanel Name="Panel" DockPanel.Dock="Bottom">
+            <WrapPanel.Background>
+                <SolidColorBrush Color="#242424"/>
+            </WrapPanel.Background>
+            <Label BorderThickness="1">
+                <Label.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00C000" Offset="0"/>
+                        <GradientStop Color="#008000" Offset="0.4"/>
+                        <GradientStop Color="#004000" Offset="0.8"/>
+                        <GradientStop Color="#004000" Offset="1"/>
+                    </LinearGradientBrush>
+                </Label.Background>
+                <Label.BorderBrush>
+                    <SolidColorBrush Color="Green"/>
+                </Label.BorderBrush>
+                <Grid>
+                    <TextBlock Text="Click 'Advice'" Padding="4 0 4 0" Foreground="White"/>
+                </Grid>
+            </Label>
+            <WrapPanel.Resources>
+                <Style TargetType="Button">
+                    <Setter Property="Margin" Value="2,3,0,2"/>
+                </Style>
+                <Style TargetType="Label">
+                    <Setter Property="Margin" Value="2,3,0,2 "/>
+                </Style>
+            </WrapPanel.Resources>
+        </WrapPanel>
         <wv2:WebView2 Name="WebBrowser" />
     </DockPanel>
 </Window>

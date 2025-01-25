@@ -4,22 +4,19 @@ namespace Chezzz
 {
     public class Move
     {
+        public int Index { get; set; }
         public int Depth { get; set; }
         public string FirstMove { get; set; }
-        public string Score { get; set; }
-        public int ScoreI { get; set; }
-        public SolidColorBrush ScoreColor { get; set; }
-        public SolidColorBrush MoveColor { get; set; }
+        public string ScoreText { get; set; }
+        public int ScoreValue { get; set; }
         public string Forecast { get; set; }
 
         public Move()
         {
             Depth = -1;
             FirstMove = string.Empty;
-            Score = string.Empty;
-            ScoreI = 0;
-            ScoreColor = Brushes.Black;
-            MoveColor = Brushes.Black;
+            ScoreText = string.Empty;
+            ScoreValue = 0;
             Forecast = string.Empty;
         }
     }
