@@ -1,9 +1,11 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Chezzz.Properties;
 
 namespace Chezzz;
 
@@ -15,7 +17,8 @@ public partial class MainWindow
     private readonly IProgress<string>? _status;
     private readonly string? _stockfishPath;
     private readonly SortedList<int, Move> _moves = new();
-    private int _preferableScoreValue = POSITIVE_MATE;
+    private int _requiredScoreValue;
+    private static readonly int[] _predefinedScoreValues = { NEGATIVE_MATE, -1000, -500, -300, -200, -100, -50, 0, 50, 100, 200, 300, 500, 1000, POSITIVE_MATE };
 
     private void WindowLoaded()
     {
@@ -28,7 +31,20 @@ public partial class MainWindow
         Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - margin - Width) / 2;
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
 
+        UpdateRequiredScore();
+
         GotoPlatform();
+    }
+
+    private async void GoAdvice()
+    {
+        if (!File.Exists(_stockfishPath)) {
+            _status?.Report($"{_stockfishPath} not found");
+        }
+
+        Advice.IsEnabled = false;
+        await AdviceAsync();
+        Advice.IsEnabled = true;
     }
 
     [GeneratedRegex(@"<wc-chess-board[^>]*\bclass\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase)]
@@ -425,7 +441,7 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
-        ShowMoves(_preferableScoreValue);
+        ShowMoves(_requiredScoreValue);
     }
 
     private static Color DarkenColor(Color color, double factor)
@@ -456,36 +472,117 @@ public partial class MainWindow
         return Color.FromArgb(a, r, g, b);
     }
 
-    private static Color GetColor(Move move, int minScoreNegative, int maxScorePositive)
+    private static Color GetColor(int scoreValue, int minScoreNegative, int maxScorePositive)
     {
-        switch (move.ScoreValue) {
+        switch (scoreValue) {
             case NEGATIVE_MATE:
                 return Colors.DarkRed;
             case POSITIVE_MATE:
                 return Colors.DarkGreen;
         }
 
+        scoreValue = Math.Max(minScoreNegative, Math.Min(maxScorePositive, scoreValue));
+
         double normalizedValue;
         if (minScoreNegative == 0) {
-            minScoreNegative = Math.Min(-1000, move.ScoreValue);
+            minScoreNegative = Math.Min(-1000, scoreValue);
         }
 
-        if (move.ScoreValue <= 0) {
-            normalizedValue = (double)move.ScoreValue / minScoreNegative;
+        if (scoreValue <= 0) {
+            normalizedValue = (double)scoreValue / minScoreNegative;
             return InterpolateColor(Colors.Gray, Colors.Red, normalizedValue);
         }
 
         if (maxScorePositive == 0) {
-            maxScorePositive = Math.Max(1000, move.ScoreValue);
+            maxScorePositive = Math.Max(1000, scoreValue);
         }
 
-        normalizedValue = (double)move.ScoreValue / maxScorePositive;
+        normalizedValue = (double)scoreValue / maxScorePositive;
         return InterpolateColor(Colors.Gray, Colors.Green, normalizedValue);
+    }
+
+    private void ChangeRequiredScore(int delta)
+    {
+        int index;
+        if (delta > 0) {
+            index = 0;
+            while (index < _predefinedScoreValues.Length) {
+                if (_requiredScoreValue == _predefinedScoreValues[index]) {
+                    break;
+                }
+
+                if (_requiredScoreValue > _predefinedScoreValues[index] && _requiredScoreValue < _predefinedScoreValues[index + 1]) {
+                    break;
+                }
+
+                index++;
+            }
+
+            if (index < _predefinedScoreValues.Length) {
+                index++;
+            }
+        }
+        else {
+            index = _predefinedScoreValues.Length - 1;
+            while (index >= 0) {
+                if (_requiredScoreValue == _predefinedScoreValues[index]) {
+                    break;
+                }
+
+                if (_requiredScoreValue < _predefinedScoreValues[index] && _requiredScoreValue > _predefinedScoreValues[index - 1]) {
+                    break;
+                }
+
+                index--;
+            }
+
+            if (index > 0) {
+                index--;
+            }
+        }
+
+        ShowMoves(_predefinedScoreValues[index]);
+    }
+
+    private void UpdateRequiredScore()
+    {
+        DescreaseScore.IsEnabled = _requiredScoreValue > NEGATIVE_MATE;
+        IncreaseScore.IsEnabled = _requiredScoreValue < POSITIVE_MATE;
+
+        var color = GetColor(_requiredScoreValue, -1000, 1000);
+        var darkenColor = DarkenColor(color, 0.5);
+        var ligthenColor = LigthenColor(color, 0.5);
+        var gradient = new LinearGradientBrush {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(0, 1),
+            GradientStops = {
+                new GradientStop(ligthenColor, 0),
+                new GradientStop(color, 0.4),
+                new GradientStop(darkenColor, 0.8),
+                new GradientStop(darkenColor, 1)
+            }
+        };
+
+        var requiredScoreText = _requiredScoreValue switch {
+            POSITIVE_MATE => "MAX",
+            NEGATIVE_MATE => "MIN",
+            _ => _requiredScoreValue < 0
+                ? $"-{Math.Abs(_requiredScoreValue) / 100.0:F2}"
+                : $"+{_requiredScoreValue / 100.0:F2}"
+        };
+
+        RequiredScoreText.Text = requiredScoreText;
+        RequiredScore.Background = gradient;
+        RequiredScore.BorderBrush = new SolidColorBrush(color);
     }
 
     private void ShowMoves(int preferableScoreValue)
     {
-        _preferableScoreValue = preferableScoreValue;
+        _requiredScoreValue = preferableScoreValue;
+        Settings.Default.RequiredScoreValue = _requiredScoreValue;
+        Settings.Default.Save();
+
+        UpdateRequiredScore();
 
         Panel.Children.Clear();
 
@@ -493,7 +590,7 @@ public partial class MainWindow
         var diffMin = int.MaxValue;
         var moves = _moves.Values.OrderByDescending(move => move.ScoreValue).ToArray();
         foreach (var move in moves) {
-            var diff = Math.Abs(move.ScoreValue - _preferableScoreValue);
+            var diff = Math.Abs(move.ScoreValue - _requiredScoreValue);
             if (diff < diffMin) {
                 diffMin = diff;
                 labelIndex = move.Index;
@@ -513,7 +610,7 @@ public partial class MainWindow
         }
 
         foreach (var move in moves) {
-            var color = GetColor(move, minScoreNegative, maxScorePositive);
+            var color = GetColor(move.ScoreValue, minScoreNegative, maxScorePositive);
             var darkenColor = DarkenColor(color, 0.5);
             var ligthenColor = LigthenColor(color, 0.5);
             var gradient = new LinearGradientBrush {
@@ -559,6 +656,7 @@ public partial class MainWindow
             grid.Children.Add(firstmoveTextBlock);
 
             var moveLabel = new Label {
+                Margin = new Thickness(0, 0, 2, 0),
                 BorderThickness = new Thickness(1),
                 BorderBrush = new SolidColorBrush(color),
                 Content = grid,
@@ -570,6 +668,7 @@ public partial class MainWindow
             }
             else {
                 var moveButton = new Button {
+                    Margin = new Thickness(0, 0, 2, 0),
                     BorderThickness = new Thickness(1),
                     BorderBrush = new SolidColorBrush(color),
                     Background = gradient,

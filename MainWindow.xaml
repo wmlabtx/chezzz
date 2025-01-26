@@ -6,7 +6,42 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:chezzz="clr-namespace:Chezzz"
         mc:Ignorable="d"
-        Title="MainWindow" Loaded="MainWindow_OnLoaded" Height="450" Width="800">
+        Title="MainWindow" Loaded="MainWindow_OnLoaded" Height="450" Width="800"
+        KeyDown="Window_KeyDown">
+    <Window.Resources>
+        <Style x:Key="ArrowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#242424"/>
+            <Setter Property="BorderBrush" Value="LightGray"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Foreground" Value="LightGray"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="25">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="BorderBrush" Value="DimGray"/>
+                    <Setter Property="Foreground" Value="DimGray"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="LightBlue"/>
+                    <Setter Property="Foreground" Value="LightBlue"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="BorderBrush" Value="White"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
     <DockPanel LastChildFill="true">
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBar.ItemsPanel>
@@ -21,7 +56,7 @@
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
             <StatusBarItem Grid.Column="0">
-                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True" Padding="6 0 6 0">Advice</Button>
+                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True" Padding="6 0 6 0">Advice [F1]</Button>
             </StatusBarItem>
             <StatusBarItem Grid.Column="1">
                 <TextBlock Name="Status" />
@@ -33,36 +68,61 @@
                 </ComboBox>
             </StatusBarItem>
         </StatusBar>
-
-        <WrapPanel Name="Panel" DockPanel.Dock="Bottom">
-            <WrapPanel.Background>
-                <SolidColorBrush Color="#242424"/>
-            </WrapPanel.Background>
-            <Label BorderThickness="1">
-                <Label.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#00C000" Offset="0"/>
-                        <GradientStop Color="#008000" Offset="0.4"/>
-                        <GradientStop Color="#004000" Offset="0.8"/>
-                        <GradientStop Color="#004000" Offset="1"/>
-                    </LinearGradientBrush>
-                </Label.Background>
-                <Label.BorderBrush>
-                    <SolidColorBrush Color="Green"/>
-                </Label.BorderBrush>
-                <Grid>
-                    <TextBlock Text="Click 'Advice'" Padding="4 0 4 0" Foreground="White"/>
-                </Grid>
-            </Label>
-            <WrapPanel.Resources>
-                <Style TargetType="Button">
-                    <Setter Property="Margin" Value="2,3,0,2"/>
-                </Style>
-                <Style TargetType="Label">
-                    <Setter Property="Margin" Value="2,3,0,2 "/>
-                </Style>
-            </WrapPanel.Resources>
-        </WrapPanel>
+        <StatusBar DockPanel.Dock="Bottom" Background="#242424" Padding="3">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+            <StatusBarItem Grid.Column="0">
+                <Button Name="DescreaseScore" Style="{StaticResource ArrowButtonStyle}" Click="DecreaseScore_OnClick">
+                    <Border Width="20" Height="20" BorderThickness="2" CornerRadius="20">
+                        <Viewbox Width="10" Height="10">
+                            <Path Data="M 0,0 L 5,6 10,0" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2" Stretch="Uniform"/>
+                        </Viewbox>
+                    </Border>
+                </Button>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="1">
+                <Label Name="RequiredScore" BorderThickness="1">
+                    <Label.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#00C000" Offset="0"/>
+                            <GradientStop Color="#008000" Offset="0.4"/>
+                            <GradientStop Color="#004000" Offset="0.8"/>
+                            <GradientStop Color="#004000" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Label.Background>
+                    <Label.BorderBrush>
+                        <SolidColorBrush Color="Green"/>
+                    </Label.BorderBrush>
+                    <Grid>
+                        <TextBlock Name="RequiredScoreText" Text="MAX" Padding="4 0 4 0" Foreground="White"/>
+                    </Grid>
+                </Label>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="2">
+                <Button Name="IncreaseScore" IsEnabled="False" Style="{StaticResource ArrowButtonStyle}" Click="IncreaseScore_OnClick">
+                    <Border Width="20" Height="20"  BorderThickness="2" CornerRadius="20">
+                        <Viewbox Width="10" Height="10">
+                            <Path Data="M 0,6 L 5,0 10,6" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2" Stretch="Uniform"/>
+                        </Viewbox>
+                    </Border>
+                </Button>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="3">
+                <WrapPanel Name="Panel" DockPanel.Dock="Bottom">
+                    <Label Content="Pick your score and click 'Advice' or press F1 during you move" Foreground="White"></Label>
+                </WrapPanel>
+            </StatusBarItem>
+        </StatusBar>
         <wv2:WebView2 Name="WebBrowser" />
     </DockPanel>
 </Window>

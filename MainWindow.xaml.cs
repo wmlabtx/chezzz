@@ -1,7 +1,9 @@
-﻿using System.Configuration;
+﻿using Chezzz.Properties;
+using System.Configuration;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace Chezzz
 {
@@ -16,6 +18,8 @@ namespace Chezzz
             if (!File.Exists(_stockfishPath)) {
                 _status?.Report($"{_stockfishPath} not found");
             }
+
+            _requiredScoreValue = Settings.Default.RequiredScoreValue;
         }
 
         private void GotoPlatform()
@@ -38,18 +42,29 @@ namespace Chezzz
 
         private async void Advice_OnClick(object sender, RoutedEventArgs e)
         {
-            if (!File.Exists(_stockfishPath)) {
-                _status?.Report($"{_stockfishPath} not found");
-            }
-
-            Advice.IsEnabled = false;
-            await AdviceAsync();
-            Advice.IsEnabled = true;
+            GoAdvice();
         }
 
         private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
             WindowLoaded();
+        }
+
+        private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredScore(-1);
+        }
+
+        private void IncreaseScore_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredScore(+1);
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.F1) {
+                GoAdvice();
+            }
         }
     }
 }
