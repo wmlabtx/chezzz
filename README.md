@@ -67,6 +67,10 @@ Or the worst one:
 
 The selected game strength is saved in the user profile (for example, in C:\Users\wmlab\AppData\Local\Chezzz\).
 
+The file **openings.csv** contains opening positions and their names. If the move is known in opening theory, its name or the symbol "B" is added
+
+![0202-1](https://github.com/user-attachments/assets/9839323e-9148-4b97-a9a6-3fe532e79708)
+
 The advisor supports both popular chess websites. You can switch between them at any time.
 
 ![0124-8](https://github.com/user-attachments/assets/b76ccd3e-774b-4207-8470-babc7be6a4b0)
