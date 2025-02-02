@@ -40,7 +40,7 @@ namespace Chezzz
             GotoPlatform();
         }
 
-        private async void Advice_OnClick(object sender, RoutedEventArgs e)
+        private void Advice_OnClick(object sender, RoutedEventArgs e)
         {
             GoAdvice();
         }

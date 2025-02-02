@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,6 +20,7 @@ public partial class MainWindow
     private readonly SortedList<int, Move> _moves = new();
     private int _requiredScoreValue;
     private static readonly int[] _predefinedScoreValues = { NEGATIVE_MATE, -1000, -500, -300, -200, -100, -50, 0, 50, 100, 200, 300, 500, 1000, POSITIVE_MATE };
+    private readonly SortedList<string, string> _openings = new();
 
     private void WindowLoaded()
     {
@@ -34,6 +36,8 @@ public partial class MainWindow
         UpdateRequiredScore();
 
         GotoPlatform();
+
+        ReadOpeningBook();
     }
 
     private async void GoAdvice()
@@ -438,6 +442,40 @@ public partial class MainWindow
             _moves[move.Index] = move;
         }
 
+        foreach (var move in _moves.Values) {
+            await inputWriter.WriteLineAsync($"position fen {fen} moves {move.FirstMove}");
+            await inputWriter.FlushAsync();
+
+            await inputWriter.WriteLineAsync("d");
+            await inputWriter.FlushAsync();
+
+            var newFen = string.Empty;
+            while ((line = await outputReader.ReadLineAsync()) != null) {
+                if (!line.StartsWith("Fen:")) {
+                    continue;
+                }
+
+                newFen = line[5..].Trim();
+                break;
+            }
+
+            var pos = newFen.IndexOf(" ", StringComparison.Ordinal);
+            if (pos > 0) {
+                newFen = newFen[..pos];
+            }
+
+            if (!string.IsNullOrEmpty(newFen)) {
+                if (_openings.TryGetValue(newFen, out var opening)) {
+                    move.Opening = opening;
+                }
+            }
+        }
+
+        await inputWriter.WriteLineAsync("quit");
+        await inputWriter.FlushAsync();
+
+        await stockfish.WaitForExitAsync(); 
+
         inputWriter.Close();
         stockfish.Close();
 
@@ -625,9 +663,15 @@ public partial class MainWindow
             };
 
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            if (string.IsNullOrEmpty(move.Opening)) {
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            }
+            else {
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            }
 
             var scoreTextBlock = new TextBlock {
                 Text = move.ScoreText,
@@ -647,13 +691,28 @@ public partial class MainWindow
                 Padding = new Thickness(4, 0, 4, 0)
             };
 
-            scoreTextBlock.SetValue(Grid.ColumnProperty, 0);
-            wdlTextBlock.SetValue(Grid.ColumnProperty, 1);
-            firstmoveTextBlock.SetValue(Grid.ColumnProperty, 2);
+            var openingTextBlock = new TextBlock {
+                Text = move.Opening,
+                Foreground = Brushes.White,
+                Padding = new Thickness(4, 0, 4, 0)
+            };
 
-            grid.Children.Add(scoreTextBlock);
-            grid.Children.Add(wdlTextBlock);
-            grid.Children.Add(firstmoveTextBlock);
+            if (string.IsNullOrEmpty(move.Opening)) {
+                scoreTextBlock.SetValue(Grid.ColumnProperty, 0);
+                wdlTextBlock.SetValue(Grid.ColumnProperty, 1);
+                firstmoveTextBlock.SetValue(Grid.ColumnProperty, 2);
+
+                grid.Children.Add(scoreTextBlock);
+                grid.Children.Add(wdlTextBlock);
+                grid.Children.Add(firstmoveTextBlock);
+            }
+            else {
+                firstmoveTextBlock.SetValue(Grid.ColumnProperty, 0);
+                openingTextBlock.SetValue(Grid.ColumnProperty, 1);
+
+                grid.Children.Add(firstmoveTextBlock);
+                grid.Children.Add(openingTextBlock);
+            }
 
             var moveLabel = new Label {
                 Margin = new Thickness(0, 0, 2, 0),
@@ -672,7 +731,9 @@ public partial class MainWindow
                     BorderThickness = new Thickness(1),
                     BorderBrush = new SolidColorBrush(color),
                     Background = gradient,
-                    Width = 8,
+                    Content = string.IsNullOrEmpty(move.Opening)? "" : "B",
+                    MinWidth = 8,
+                    Foreground = Brushes.White,
                     Cursor = Cursors.Hand,
                     Tag = move,
                     ToolTip = moveLabel
@@ -687,6 +748,64 @@ public partial class MainWindow
                 ToolTipService.SetInitialShowDelay(moveButton, 0);
                 Panel.Children.Add(moveButton);
             }
+        }
+    }
+
+    private static List<string> ParseCsvLine(string line)
+    {
+        var fields = new List<string>();
+        var field = new StringBuilder();
+        var inQuotes = false;
+        for (var i = 0; i < line.Length; i++) {
+            var c = line[i];
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.Length && line[i + 1] == '"') {
+                        field.Append('"');
+                        i++;
+                    }
+                    else {
+                        inQuotes = false;
+                    }
+                }
+                else {
+                    field.Append(c);
+                }
+            }
+            else {
+                switch (c) {
+                    case '"':
+                        inQuotes = true;
+                        break;
+                    case ',':
+                        fields.Add(field.ToString());
+                        field.Clear();
+                        break;
+                    default:
+                        field.Append(c);
+                        break;
+                }
+            }
+        }
+
+        fields.Add(field.ToString());
+        return fields;
+    }
+
+    private void ReadOpeningBook()
+    {
+        var bookPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "openings.csv");
+        if (!File.Exists(bookPath)) {
+            return;
+        }
+
+        foreach (var line in File.ReadLines(bookPath)) {
+            var fields = ParseCsvLine(line);
+            if (fields.Count != 2) {
+                continue;
+            }
+
+            _openings[fields[0]] = fields[1];
         }
     }
 }
