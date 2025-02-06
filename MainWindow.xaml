@@ -49,6 +49,7 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
@@ -56,12 +57,15 @@
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
             <StatusBarItem Grid.Column="0">
-                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True" Padding="6 0 6 0">Advice [F1]</Button>
+                <Button Name="Time" Click="Time_OnClick" IsEnabled="True" Padding="6 0 6 0">1s</Button>
             </StatusBarItem>
             <StatusBarItem Grid.Column="1">
-                <TextBlock Name="Status" />
+                <Button Name="Advice" Click="Advice_OnClick" IsEnabled="True" Padding="6 0 6 0">Advice [F1]</Button>
             </StatusBarItem>
             <StatusBarItem Grid.Column="2">
+                <TextBlock Name="Status" />
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="3">
                 <ComboBox Name="Platform" SelectedIndex="0" SelectionChanged="Platform_SelectionChanged">
                     <ComboBoxItem Content="{x:Static chezzz:AppConsts.CHESS}"/>
                     <ComboBoxItem Content="{x:Static chezzz:AppConsts.LICHESS}" />

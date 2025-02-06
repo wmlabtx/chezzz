@@ -34,5 +34,17 @@ namespace Chezzz.Properties {
                 this["RequiredScoreValue"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        public int RequiredTimeMs {
+            get {
+                return ((int)(this["RequiredTimeMs"]));
+            }
+            set {
+                this["RequiredTimeMs"] = value;
+            }
+        }
     }
 }

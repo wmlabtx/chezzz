@@ -12,6 +12,7 @@ public class Move
 
     public Move()
     {
+        Index = -1;
         Depth = -1;
         FirstMove = string.Empty;
         ScoreText = string.Empty;

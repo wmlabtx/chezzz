@@ -20,6 +20,7 @@ namespace Chezzz
             }
 
             _requiredScoreValue = Settings.Default.RequiredScoreValue;
+            _requiredTimeMs = Settings.Default.RequiredTimeMs;
         }
 
         private void GotoPlatform()
@@ -45,9 +46,9 @@ namespace Chezzz
             GoAdvice();
         }
 
-        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
-            WindowLoaded();
+            await WindowLoadedAsync();
         }
 
         private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
@@ -65,6 +66,11 @@ namespace Chezzz
             if (e.Key == Key.F1) {
                 GoAdvice();
             }
+        }
+
+        private void Time_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredTime();
         }
     }
 }
