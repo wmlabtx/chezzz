@@ -1,12 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 using Chezzz.Properties;
+using Path = System.IO.Path;
 
 namespace Chezzz;
 
@@ -18,11 +19,23 @@ public partial class MainWindow
     private readonly IProgress<string>? _status;
     private readonly string? _stockfishPath;
     private readonly SortedList<int, Move> _moves = new();
-    private int _requiredScoreValue;
-    private static readonly int[] _predefinedScoreValues = { NEGATIVE_MATE, -1000, -500, -300, -200, -100, -50, 0, 50, 100, 200, 300, 500, 1000, POSITIVE_MATE };
-    private readonly SortedList<string, string> _openings = new();
+    private int _currentIndex;
+    private int _requiredScore;
+    private static readonly int[] _predefinedScore = {
+        NEGATIVE_MATE,
+        -1000, -500, -400, -300, -250, -200, -150, -100, -50,
+        0,
+        50, 100, 150, 200, 250, 300, 400, 500, 1000,
+        POSITIVE_MATE
+    };
+    private int _requiredTime;
+    private static readonly int[] _predefinedTime = {
+        500, 1000, 1500, 2000, 2500, 3000, 4000, 5000
+    };
 
-    private void WindowLoaded()
+    private readonly SortedDictionary<string, string> _openings = new();
+
+    private async Task WindowLoadedAsync()
     {
         const int margin = 10;
 
@@ -34,10 +47,11 @@ public partial class MainWindow
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
 
         UpdateRequiredScore();
+        UpdateRequiredTime();
 
         GotoPlatform();
 
-        ReadOpeningBook();
+        await Task.Run(ReadOpeningBook);
     }
 
     private async void GoAdvice()
@@ -46,9 +60,24 @@ public partial class MainWindow
             _status?.Report($"{_stockfishPath} not found");
         }
 
+        if (!Advice.IsEnabled) {
+            return;
+        }
+
         Advice.IsEnabled = false;
+        var countdownTask = UpdateButtonCountdown(_requiredTime);
         await AdviceAsync();
+        await countdownTask;
+        Advice.Content = "Advice [F1]";
         Advice.IsEnabled = true;
+    }
+
+    private async Task UpdateButtonCountdown(int timeMs)
+    {
+        for (var remaining = timeMs; remaining > 0; remaining -= 500) {
+            Advice.Content = $"Advice [{remaining / 1000.0:F1}]";
+            await Task.Delay(500);
+        }
     }
 
     [GeneratedRegex(@"<wc-chess-board[^>]*\bclass\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase)]
@@ -359,10 +388,12 @@ public partial class MainWindow
                 break;
         }
 
-        await inputWriter.WriteLineAsync("go depth 16");
+        await inputWriter.WriteLineAsync($"go movetime {_requiredTime}");
         await inputWriter.FlushAsync();
 
         _moves.Clear();
+        _currentIndex = -1;
+
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
             if (line.StartsWith("bestmove")) {
@@ -384,14 +415,14 @@ public partial class MainWindow
                 }
 
                 if (parts[i].Equals("mate")) {
-                    move.ScoreValue = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
+                    move.Score = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
                     move.ScoreText = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
                     continue;
                 }
 
                 if (parts[i].Equals("cp")) {
-                    move.ScoreValue = int.Parse(parts[i + 1]);
-                    move.ScoreText = move.ScoreValue < 0 ? $"-{Math.Abs(move.ScoreValue) / 100.0:F2}" : $"+{move.ScoreValue / 100.0:F2}";
+                    move.Score = int.Parse(parts[i + 1]);
+                    move.ScoreText = move.Score < 0 ? $"-{Math.Abs(move.Score) / 100.0:F2}" : $"+{move.Score / 100.0:F2}";
                     continue;
                 }
 
@@ -436,6 +467,7 @@ public partial class MainWindow
             }
 
             if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
+                ShowMoves();
                 _moves.Clear();
             }
 
@@ -479,64 +511,42 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
-        ShowMoves(_requiredScoreValue);
+        _currentIndex = GetCurrentIndex();
+        ShowMoves();
     }
 
-    private static Color DarkenColor(Color color, double factor)
+    private int GetCurrentIndex()
     {
-        factor = Math.Max(0, Math.Min(1, factor));
-        var r = (byte)(color.R * (1 - factor));
-        var g = (byte)(color.G * (1 - factor));
-        var b = (byte)(color.B * (1 - factor));
-        return Color.FromRgb(r, g, b);
-    }
-
-    private static Color LigthenColor(Color color, double factor)
-    {
-        factor = Math.Max(0, Math.Min(1, factor));
-        var r = (byte)((255-color.R) * factor + color.R);
-        var g = (byte)((255 - color.G) * factor + color.G);
-        var b = (byte)((255 - color.B) * factor + color.B);
-        return Color.FromRgb(r, g, b);
-    }
-
-    private static Color InterpolateColor(Color color1, Color color2, double factor)
-    {
-        factor = Math.Max(0, Math.Min(1, factor));
-        var a = (byte)(color1.A + (color2.A - color1.A) * factor);
-        var r = (byte)(color1.R + (color2.R - color1.R) * factor);
-        var g = (byte)(color1.G + (color2.G - color1.G) * factor);
-        var b = (byte)(color1.B + (color2.B - color1.B) * factor);
-        return Color.FromArgb(a, r, g, b);
-    }
-
-    private static Color GetColor(int scoreValue, int minScoreNegative, int maxScorePositive)
-    {
-        switch (scoreValue) {
-            case NEGATIVE_MATE:
-                return Colors.DarkRed;
-            case POSITIVE_MATE:
-                return Colors.DarkGreen;
+        switch (_moves.Count) {
+            case 0:
+                return -1;
+            case 1:
+                return 0;
         }
 
-        scoreValue = Math.Max(minScoreNegative, Math.Min(maxScorePositive, scoreValue));
-
-        double normalizedValue;
-        if (minScoreNegative == 0) {
-            minScoreNegative = Math.Min(-1000, scoreValue);
+        int index;
+        var moves = _moves
+            .Values
+            .OrderByDescending(move => move.Score)
+            .ToArray();
+        var goodMovesCount = moves.Count(move => move.Score >= _requiredScore - 25);
+        if (goodMovesCount == 0) {
+            var savingMovesCount = moves.Count(move => move.Score >= moves[0].Score - 25);
+            index = RandomNumberGenerator.GetInt32(0, savingMovesCount);
+            return index;
         }
 
-        if (scoreValue <= 0) {
-            normalizedValue = (double)scoreValue / minScoreNegative;
-            return InterpolateColor(Colors.Gray, Colors.Red, normalizedValue);
+        index = 0;
+        var minDiff = int.MaxValue;
+        for ( var i = 0; i < goodMovesCount; i++) {
+            var diff = Math.Abs(moves[i].Score - _requiredScore) - RandomNumberGenerator.GetInt32(0, 25);
+            if (diff < minDiff) {
+                minDiff = diff;
+                index = i;
+            }
         }
 
-        if (maxScorePositive == 0) {
-            maxScorePositive = Math.Max(1000, scoreValue);
-        }
-
-        normalizedValue = (double)scoreValue / maxScorePositive;
-        return InterpolateColor(Colors.Gray, Colors.Green, normalizedValue);
+        return index;
     }
 
     private void ChangeRequiredScore(int delta)
@@ -544,30 +554,30 @@ public partial class MainWindow
         int index;
         if (delta > 0) {
             index = 0;
-            while (index < _predefinedScoreValues.Length) {
-                if (_requiredScoreValue == _predefinedScoreValues[index]) {
+            while (index < _predefinedScore.Length) {
+                if (_requiredScore == _predefinedScore[index]) {
                     break;
                 }
 
-                if (_requiredScoreValue > _predefinedScoreValues[index] && _requiredScoreValue < _predefinedScoreValues[index + 1]) {
+                if (_requiredScore > _predefinedScore[index] && _requiredScore < _predefinedScore[index + 1]) {
                     break;
                 }
 
                 index++;
             }
 
-            if (index < _predefinedScoreValues.Length) {
+            if (index < _predefinedScore.Length - 1) {
                 index++;
             }
         }
         else {
-            index = _predefinedScoreValues.Length - 1;
+            index = _predefinedScore.Length - 1;
             while (index >= 0) {
-                if (_requiredScoreValue == _predefinedScoreValues[index]) {
+                if (_requiredScore == _predefinedScore[index]) {
                     break;
                 }
 
-                if (_requiredScoreValue < _predefinedScoreValues[index] && _requiredScoreValue > _predefinedScoreValues[index - 1]) {
+                if (_requiredScore < _predefinedScore[index] && _requiredScore > _predefinedScore[index - 1]) {
                     break;
                 }
 
@@ -579,176 +589,56 @@ public partial class MainWindow
             }
         }
 
-        ShowMoves(_predefinedScoreValues[index]);
-    }
-
-    private void UpdateRequiredScore()
-    {
-        DescreaseScore.IsEnabled = _requiredScoreValue > NEGATIVE_MATE;
-        IncreaseScore.IsEnabled = _requiredScoreValue < POSITIVE_MATE;
-
-        var color = GetColor(_requiredScoreValue, -1000, 1000);
-        var darkenColor = DarkenColor(color, 0.5);
-        var ligthenColor = LigthenColor(color, 0.5);
-        var gradient = new LinearGradientBrush {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(0, 1),
-            GradientStops = {
-                new GradientStop(ligthenColor, 0),
-                new GradientStop(color, 0.4),
-                new GradientStop(darkenColor, 0.8),
-                new GradientStop(darkenColor, 1)
-            }
-        };
-
-        var requiredScoreText = _requiredScoreValue switch {
-            POSITIVE_MATE => "MAX",
-            NEGATIVE_MATE => "MIN",
-            _ => _requiredScoreValue < 0
-                ? $"-{Math.Abs(_requiredScoreValue) / 100.0:F2}"
-                : $"+{_requiredScoreValue / 100.0:F2}"
-        };
-
-        RequiredScoreText.Text = requiredScoreText;
-        RequiredScore.Background = gradient;
-        RequiredScore.BorderBrush = new SolidColorBrush(color);
-    }
-
-    private void ShowMoves(int preferableScoreValue)
-    {
-        _requiredScoreValue = preferableScoreValue;
-        Settings.Default.RequiredScoreValue = _requiredScoreValue;
+        _requiredScore = _predefinedScore[index];
+        Settings.Default.RequiredScore = _requiredScore;
         Settings.Default.Save();
-
         UpdateRequiredScore();
+    }
 
-        Panel.Children.Clear();
-
-        var labelIndex = 0;
-        var diffMin = int.MaxValue;
-        var moves = _moves.Values.OrderByDescending(move => move.ScoreValue).ToArray();
-        foreach (var move in moves) {
-            var diff = Math.Abs(move.ScoreValue - _requiredScoreValue);
-            if (diff < diffMin) {
-                diffMin = diff;
-                labelIndex = move.Index;
-            }
-        }
-
-        var minScoreNegative = NEGATIVE_MATE;
-        var notmates = _moves.Values.Where(move => move.ScoreValue <= 0 && move.ScoreValue != NEGATIVE_MATE).ToArray();
-        if (notmates.Length > 0) {
-            minScoreNegative = notmates.Min(move => move.ScoreValue);
-        }
-
-        var maxScorePositive = POSITIVE_MATE;
-        notmates = _moves.Values.Where(move => move.ScoreValue >= 0 && move.ScoreValue != POSITIVE_MATE).ToArray();
-        if (notmates.Length > 0) {
-            maxScorePositive = notmates.Max(move => move.ScoreValue);
-        }
-
-        foreach (var move in moves) {
-            var color = GetColor(move.ScoreValue, minScoreNegative, maxScorePositive);
-            var darkenColor = DarkenColor(color, 0.5);
-            var ligthenColor = LigthenColor(color, 0.5);
-            var gradient = new LinearGradientBrush {
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(0, 1),
-                GradientStops = {
-                    new GradientStop(ligthenColor, 0),
-                    new GradientStop(color, 0.4),
-                    new GradientStop(darkenColor, 0.8),
-                    new GradientStop(darkenColor, 1)
+    private void ChangeRequiredTime(int delta)
+    {
+        int index;
+        if (delta > 0) {
+            index = 0;
+            while (index < _predefinedTime.Length) {
+                if (_requiredTime == _predefinedTime[index]) {
+                    break;
                 }
-            };
 
-            var grid = new Grid();
-            if (string.IsNullOrEmpty(move.Opening)) {
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            }
-            else {
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                if (_requiredTime > _predefinedTime[index] && _requiredTime < _predefinedTime[index + 1]) {
+                    break;
+                }
+
+                index++;
             }
 
-            var scoreTextBlock = new TextBlock {
-                Text = move.ScoreText,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 0, 0)
-            };
-
-            var wdlTextBlock = new TextBlock {
-                Text = move.Forecast,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 4, 0)
-            };
-
-            var firstmoveTextBlock = new TextBlock {
-                Text = move.FirstMove,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 4, 0)
-            };
-
-            var openingTextBlock = new TextBlock {
-                Text = move.Opening,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 4, 0)
-            };
-
-            if (string.IsNullOrEmpty(move.Opening)) {
-                scoreTextBlock.SetValue(Grid.ColumnProperty, 0);
-                wdlTextBlock.SetValue(Grid.ColumnProperty, 1);
-                firstmoveTextBlock.SetValue(Grid.ColumnProperty, 2);
-
-                grid.Children.Add(scoreTextBlock);
-                grid.Children.Add(wdlTextBlock);
-                grid.Children.Add(firstmoveTextBlock);
-            }
-            else {
-                firstmoveTextBlock.SetValue(Grid.ColumnProperty, 0);
-                openingTextBlock.SetValue(Grid.ColumnProperty, 1);
-
-                grid.Children.Add(firstmoveTextBlock);
-                grid.Children.Add(openingTextBlock);
-            }
-
-            var moveLabel = new Label {
-                Margin = new Thickness(0, 0, 2, 0),
-                BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(color),
-                Content = grid,
-                Background = gradient,
-            };
-
-            if (move.Index == labelIndex) {
-                Panel.Children.Add(moveLabel);
-            }
-            else {
-                var moveButton = new Button {
-                    Margin = new Thickness(0, 0, 2, 0),
-                    BorderThickness = new Thickness(1),
-                    BorderBrush = new SolidColorBrush(color),
-                    Background = gradient,
-                    Content = string.IsNullOrEmpty(move.Opening)? "" : "B",
-                    MinWidth = 8,
-                    Foreground = Brushes.White,
-                    Cursor = Cursors.Hand,
-                    Tag = move,
-                    ToolTip = moveLabel
-                };
-
-                moveButton.Click += (sender, e) => {
-                    var buttonSender = (Button)sender;
-                    var moveSender = (Move)buttonSender.Tag;
-                    ShowMoves(moveSender.ScoreValue);
-                };
-
-                ToolTipService.SetInitialShowDelay(moveButton, 0);
-                Panel.Children.Add(moveButton);
+            if (index < _predefinedTime.Length - 1) {
+                index++;
             }
         }
+        else {
+            index = _predefinedTime.Length - 1;
+            while (index >= 0) {
+                if (_requiredTime == _predefinedTime[index]) {
+                    break;
+                }
+
+                if (_requiredTime < _predefinedTime[index] && _requiredTime > _predefinedTime[index - 1]) {
+                    break;
+                }
+
+                index--;
+            }
+
+            if (index > 0) {
+                index--;
+            }
+        }
+
+        _requiredTime = _predefinedTime[index];
+        Settings.Default.RequiredTime = _requiredTime;
+        Settings.Default.Save();
+        UpdateRequiredTime();
     }
 
     private static List<string> ParseCsvLine(string line)
@@ -792,20 +682,34 @@ public partial class MainWindow
         return fields;
     }
 
-    private void ReadOpeningBook()
+    private async Task ReadOpeningBook()
     {
-        var bookPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "openings.csv");
+        var bookPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "openings.zip");
         if (!File.Exists(bookPath)) {
             return;
         }
 
-        foreach (var line in File.ReadLines(bookPath)) {
-            var fields = ParseCsvLine(line);
-            if (fields.Count != 2) {
-                continue;
-            }
+        _status?.Report("Reading named book moves...");
 
-            _openings[fields[0]] = fields[1];
+        var zipBytes = await File.ReadAllBytesAsync(bookPath);
+        using var zipStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+        var entry = archive.GetEntry("openings.csv");
+        if (entry != null) {
+            await using var entryStream = entry.Open();
+            using var reader = new StreamReader(entryStream);
+            var text = await reader.ReadToEndAsync();
+            var lines = text.Split("\r\n");
+            foreach (var line in lines) {
+                var fields = ParseCsvLine(line);
+                if (fields.Count != 2) {
+                    continue;
+                }
+
+                _openings[fields[0]] = fields[1];
+            }
         }
+
+        _status?.Report("Done");
     }
 }

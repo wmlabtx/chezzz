@@ -19,7 +19,8 @@ namespace Chezzz
                 _status?.Report($"{_stockfishPath} not found");
             }
 
-            _requiredScoreValue = Settings.Default.RequiredScoreValue;
+            _requiredScore = Settings.Default.RequiredScore;
+            _requiredTime = Settings.Default.RequiredTime;
         }
 
         private void GotoPlatform()
@@ -45,9 +46,9 @@ namespace Chezzz
             GoAdvice();
         }
 
-        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
-            WindowLoaded();
+            await WindowLoadedAsync();
         }
 
         private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
@@ -58,6 +59,16 @@ namespace Chezzz
         private void IncreaseScore_OnClick(object sender, RoutedEventArgs e)
         {
             ChangeRequiredScore(+1);
+        }
+
+        private void DecreaseTime_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredTime(-1);
+        }
+
+        private void IncreaseTime_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredTime(+1);
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
