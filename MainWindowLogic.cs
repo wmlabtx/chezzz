@@ -1,7 +1,8 @@
-﻿using System.Diagnostics;
-using System.Globalization;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -19,22 +20,20 @@ public partial class MainWindow
     private readonly string? _stockfishPath;
     private readonly SortedList<int, Move> _moves = new();
     private int _currentIndex;
-    private int _requiredScoreValue;
-    private static readonly int[] _predefinedScoreValues = {
-        NEGATIVE_MATE, 
-        -1000, -500, -400, -300, -250, -200, -150, -100, -50, 
-        0, 
-        50, 100, 150, 200, 250, 300, 400, 500, 1000, 
+    private int _requiredScore;
+    private static readonly int[] _predefinedScore = {
+        NEGATIVE_MATE,
+        -1000, -500, -400, -300, -250, -200, -150, -100, -50,
+        0,
+        50, 100, 150, 200, 250, 300, 400, 500, 1000,
         POSITIVE_MATE
     };
-    private int _requiredTimeMs;
-    private static readonly int[] _predefinedTimeMs = {
-        1000, 1500, 2000, 2500, 3000, 4000, 5000
+    private int _requiredTime;
+    private static readonly int[] _predefinedTime = {
+        500, 1000, 1500, 2000, 2500, 3000, 4000, 5000
     };
 
-
     private readonly SortedDictionary<string, string> _openings = new();
-    private readonly Random _random = new Random();
 
     private async Task WindowLoadedAsync()
     {
@@ -61,8 +60,12 @@ public partial class MainWindow
             _status?.Report($"{_stockfishPath} not found");
         }
 
+        if (!Advice.IsEnabled) {
+            return;
+        }
+
         Advice.IsEnabled = false;
-        var countdownTask = UpdateButtonCountdown(_requiredTimeMs);
+        var countdownTask = UpdateButtonCountdown(_requiredTime);
         await AdviceAsync();
         await countdownTask;
         Advice.Content = "Advice [F1]";
@@ -385,10 +388,12 @@ public partial class MainWindow
                 break;
         }
 
-        await inputWriter.WriteLineAsync($"go movetime {_requiredTimeMs}");
+        await inputWriter.WriteLineAsync($"go movetime {_requiredTime}");
         await inputWriter.FlushAsync();
 
         _moves.Clear();
+        _currentIndex = -1;
+
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
             if (line.StartsWith("bestmove")) {
@@ -410,14 +415,14 @@ public partial class MainWindow
                 }
 
                 if (parts[i].Equals("mate")) {
-                    move.ScoreValue = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
+                    move.Score = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
                     move.ScoreText = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
                     continue;
                 }
 
                 if (parts[i].Equals("cp")) {
-                    move.ScoreValue = int.Parse(parts[i + 1]);
-                    move.ScoreText = move.ScoreValue < 0 ? $"-{Math.Abs(move.ScoreValue) / 100.0:F2}" : $"+{move.ScoreValue / 100.0:F2}";
+                    move.Score = int.Parse(parts[i + 1]);
+                    move.ScoreText = move.Score < 0 ? $"-{Math.Abs(move.Score) / 100.0:F2}" : $"+{move.Score / 100.0:F2}";
                     continue;
                 }
 
@@ -462,7 +467,6 @@ public partial class MainWindow
             }
 
             if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
-                _currentIndex = GetCurrentIndex();
                 ShowMoves();
                 _moves.Clear();
             }
@@ -499,8 +503,6 @@ public partial class MainWindow
             }
         }
 
-        _currentIndex = GetCurrentIndex();
-
         await inputWriter.WriteLineAsync("quit");
         await inputWriter.FlushAsync();
 
@@ -509,40 +511,9 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
+        _currentIndex = GetCurrentIndex();
         ShowMoves();
     }
-
-    /*
-    private int GetCurrentIndex()
-    {
-        var currentIndex = -1;
-        var moves = _moves
-            .Values
-            .Where(e => !string.IsNullOrEmpty(e.Opening))
-            .OrderByDescending(move => move.ScoreValue)
-            .Take(1)
-            .ToArray();
-        if (moves.Length > 0) {
-            currentIndex = moves[0].Index;
-        }
-        else {
-            moves = _moves
-                .Values
-                .OrderByDescending(move => move.ScoreValue)
-                .ToArray();
-            for (var i = 0; i < moves.Length; i++) {
-                if (i == moves.Length - 1 ||
-                    moves[i].ScoreValue <= _requiredScoreValue ||
-                    (moves[i].ScoreValue > _requiredScoreValue && moves[i + 1].ScoreValue < _requiredScoreValue)) {
-                    currentIndex = i;
-                    break;
-                }
-            }
-        }
-
-        return currentIndex;
-    }
-    */
 
     private int GetCurrentIndex()
     {
@@ -553,26 +524,29 @@ public partial class MainWindow
                 return 0;
         }
 
-        var p = _random.NextDouble();
-        if (p < 0.75) {
-            return 0;
-        }
-
-        var currentIndex = -1;
+        int index;
         var moves = _moves
             .Values
-            .OrderByDescending(move => move.ScoreValue)
+            .OrderByDescending(move => move.Score)
             .ToArray();
-        for (var i = 1; i < moves.Length; i++) {
-            if (i == moves.Length - 1 ||
-                moves[i].ScoreValue <= _requiredScoreValue ||
-                (moves[i].ScoreValue > _requiredScoreValue && moves[i + 1].ScoreValue < _requiredScoreValue)) {
-                currentIndex = i;
-                break;
+        var goodMovesCount = moves.Count(move => move.Score >= _requiredScore - 25);
+        if (goodMovesCount == 0) {
+            var savingMovesCount = moves.Count(move => move.Score >= moves[0].Score - 25);
+            index = RandomNumberGenerator.GetInt32(0, savingMovesCount);
+            return index;
+        }
+
+        index = 0;
+        var minDiff = int.MaxValue;
+        for ( var i = 0; i < goodMovesCount; i++) {
+            var diff = Math.Abs(moves[i].Score - _requiredScore) - RandomNumberGenerator.GetInt32(0, 25);
+            if (diff < minDiff) {
+                minDiff = diff;
+                index = i;
             }
         }
 
-        return currentIndex;
+        return index;
     }
 
     private void ChangeRequiredScore(int delta)
@@ -580,30 +554,30 @@ public partial class MainWindow
         int index;
         if (delta > 0) {
             index = 0;
-            while (index < _predefinedScoreValues.Length) {
-                if (_requiredScoreValue == _predefinedScoreValues[index]) {
+            while (index < _predefinedScore.Length) {
+                if (_requiredScore == _predefinedScore[index]) {
                     break;
                 }
 
-                if (_requiredScoreValue > _predefinedScoreValues[index] && _requiredScoreValue < _predefinedScoreValues[index + 1]) {
+                if (_requiredScore > _predefinedScore[index] && _requiredScore < _predefinedScore[index + 1]) {
                     break;
                 }
 
                 index++;
             }
 
-            if (index < _predefinedScoreValues.Length) {
+            if (index < _predefinedScore.Length - 1) {
                 index++;
             }
         }
         else {
-            index = _predefinedScoreValues.Length - 1;
+            index = _predefinedScore.Length - 1;
             while (index >= 0) {
-                if (_requiredScoreValue == _predefinedScoreValues[index]) {
+                if (_requiredScore == _predefinedScore[index]) {
                     break;
                 }
 
-                if (_requiredScoreValue < _predefinedScoreValues[index] && _requiredScoreValue > _predefinedScoreValues[index - 1]) {
+                if (_requiredScore < _predefinedScore[index] && _requiredScore > _predefinedScore[index - 1]) {
                     break;
                 }
 
@@ -615,38 +589,54 @@ public partial class MainWindow
             }
         }
 
-        _requiredScoreValue = _predefinedScoreValues[index];
-        Settings.Default.RequiredScoreValue = _requiredScoreValue;
+        _requiredScore = _predefinedScore[index];
+        Settings.Default.RequiredScore = _requiredScore;
         Settings.Default.Save();
         UpdateRequiredScore();
-        _currentIndex = GetCurrentIndex();
-        ShowMoves();
     }
 
-    private void ChangeRequiredTime()
+    private void ChangeRequiredTime(int delta)
     {
-        var index = 0;
-        while (index < _predefinedTimeMs.Length) {
-            if (_requiredTimeMs == _predefinedTimeMs[index]) {
-                break;
+        int index;
+        if (delta > 0) {
+            index = 0;
+            while (index < _predefinedTime.Length) {
+                if (_requiredTime == _predefinedTime[index]) {
+                    break;
+                }
+
+                if (_requiredTime > _predefinedTime[index] && _requiredTime < _predefinedTime[index + 1]) {
+                    break;
+                }
+
+                index++;
             }
 
-            if (_requiredTimeMs > _predefinedTimeMs[index] && _requiredTimeMs < _predefinedTimeMs[index + 1]) {
-                break;
+            if (index < _predefinedTime.Length - 1) {
+                index++;
             }
-
-            index++;
-        }
-
-        if (index < _predefinedTimeMs.Length - 1) {
-            index++;
         }
         else {
-            index = 0;
+            index = _predefinedTime.Length - 1;
+            while (index >= 0) {
+                if (_requiredTime == _predefinedTime[index]) {
+                    break;
+                }
+
+                if (_requiredTime < _predefinedTime[index] && _requiredTime > _predefinedTime[index - 1]) {
+                    break;
+                }
+
+                index--;
+            }
+
+            if (index > 0) {
+                index--;
+            }
         }
 
-        _requiredTimeMs = _predefinedTimeMs[index];
-        Settings.Default.RequiredTimeMs = _requiredTimeMs;
+        _requiredTime = _predefinedTime[index];
+        Settings.Default.RequiredTime = _requiredTime;
         Settings.Default.Save();
         UpdateRequiredTime();
     }
@@ -699,29 +689,12 @@ public partial class MainWindow
             return;
         }
 
-        _status?.Report("Reading human book moves...");
+        _status?.Report("Reading named book moves...");
+
         var zipBytes = await File.ReadAllBytesAsync(bookPath);
         using var zipStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-        var entry = archive.GetEntry("chessdb.epd");
-        if (entry != null) {
-            await using var entryStream = entry.Open();
-            using var reader = new StreamReader(entryStream);
-            var text = await reader.ReadToEndAsync();
-            var lines = text.Split("\n");
-            foreach (var line in lines) {
-                var pos = line.IndexOf(" ", StringComparison.Ordinal);
-                if (pos < 0) {
-                    continue;
-                }
-
-                var fen = line[..pos];
-                _openings[fen] = "Book move";
-            }
-        }
-
-        _status?.Report("Reading named book moves...");
-        entry = archive.GetEntry("openings.csv");
+        var entry = archive.GetEntry("openings.csv");
         if (entry != null) {
             await using var entryStream = entry.Open();
             using var reader = new StreamReader(entryStream);

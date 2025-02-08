@@ -25,25 +25,25 @@ namespace Chezzz.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("10000")]
-        public int RequiredScoreValue {
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        public int RequiredTime {
             get {
-                return ((int)(this["RequiredScoreValue"]));
+                return ((int)(this["RequiredTime"]));
             }
             set {
-                this["RequiredScoreValue"] = value;
+                this["RequiredTime"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
-        public int RequiredTimeMs {
+        [global::System.Configuration.DefaultSettingValueAttribute("150")]
+        public int RequiredScore {
             get {
-                return ((int)(this["RequiredTimeMs"]));
+                return ((int)(this["RequiredScore"]));
             }
             set {
-                this["RequiredTimeMs"] = value;
+                this["RequiredScore"] = value;
             }
         }
     }

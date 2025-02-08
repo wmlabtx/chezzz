@@ -66,64 +66,46 @@ public partial class MainWindow
 
     private void UpdateRequiredScore()
     {
-        DescreaseScore.IsEnabled = _requiredScoreValue > NEGATIVE_MATE;
-        IncreaseScore.IsEnabled = _requiredScoreValue < POSITIVE_MATE;
-
-        var color = GetColor(_requiredScoreValue, -1000, 1000);
-        var darkenColor = DarkenColor(color, 0.5);
-        var ligthenColor = LigthenColor(color, 0.5);
-        var gradient = new LinearGradientBrush {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(0, 1),
-            GradientStops = {
-                new GradientStop(ligthenColor, 0),
-                new GradientStop(color, 0.4),
-                new GradientStop(darkenColor, 0.8),
-                new GradientStop(darkenColor, 1)
-            }
-        };
-
-        var requiredScoreText = _requiredScoreValue switch {
+        var requiredScoreText = _requiredScore switch {
             POSITIVE_MATE => "MAX",
             NEGATIVE_MATE => "MIN",
-            _ => _requiredScoreValue < 0
-                ? $"-{Math.Abs(_requiredScoreValue) / 100.0:F2}"
-                : $"+{_requiredScoreValue / 100.0:F2}"
+            _ => _requiredScore < 0
+                ? $"-{Math.Abs(_requiredScore) / 100.0:F2}"
+                : $"+{_requiredScore / 100.0:F2}"
         };
 
+        DescreaseScore.IsEnabled = _requiredScore > NEGATIVE_MATE;
+        IncreaseScore.IsEnabled = _requiredScore < POSITIVE_MATE;
         RequiredScoreText.Text = requiredScoreText;
-        RequiredScore.Background = gradient;
-        RequiredScore.BorderBrush = new SolidColorBrush(color);
     }
 
     private void UpdateRequiredTime()
     {
-        var str = (_requiredTimeMs / 1000.0).ToString("0.#");
-        Time.Content = $"{str}s";
+        DescreaseTime.IsEnabled = _requiredTime > _predefinedTime[0];
+        IncreaseTime.IsEnabled = _requiredTime < _predefinedTime[^1];
+        RequiredTimeText.Text = $"{_requiredTime / 1000.0:F1}s";
     }
 
     private void ShowMoves()
     {
-        UpdateRequiredScore();
-
         Panel.Children.Clear();
 
-        var moves = _moves.Values.OrderByDescending(move => move.ScoreValue).ToArray();
+        var moves = _moves.Values.OrderByDescending(move => move.Score).ToArray();
 
         var minScoreNegative = NEGATIVE_MATE;
-        var notmates = _moves.Values.Where(move => move.ScoreValue <= 0 && move.ScoreValue != NEGATIVE_MATE).ToArray();
+        var notmates = _moves.Values.Where(move => move.Score <= 0 && move.Score != NEGATIVE_MATE).ToArray();
         if (notmates.Length > 0) {
-            minScoreNegative = notmates.Min(move => move.ScoreValue);
+            minScoreNegative = notmates.Min(move => move.Score);
         }
 
         var maxScorePositive = POSITIVE_MATE;
-        notmates = _moves.Values.Where(move => move.ScoreValue >= 0 && move.ScoreValue != POSITIVE_MATE).ToArray();
+        notmates = _moves.Values.Where(move => move.Score >= 0 && move.Score != POSITIVE_MATE).ToArray();
         if (notmates.Length > 0) {
-            maxScorePositive = notmates.Max(move => move.ScoreValue);
+            maxScorePositive = notmates.Max(move => move.Score);
         }
 
         foreach (var move in moves) {
-            var color = GetColor(move.ScoreValue, minScoreNegative, maxScorePositive);
+            var color = GetColor(move.Score, minScoreNegative, maxScorePositive);
             var darkenColor = DarkenColor(color, 0.5);
             var ligthenColor = LigthenColor(color, 0.5);
             var gradient = new LinearGradientBrush {

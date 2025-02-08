@@ -2,11 +2,11 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Chezzz.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="RequiredScoreValue" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">10000</Value>
-    </Setting>
-    <Setting Name="RequiredTimeMs" Type="System.Int32" Scope="User">
+    <Setting Name="RequiredTime" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="RequiredScore" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">150</Value>
     </Setting>
   </Settings>
 </SettingsFile>
