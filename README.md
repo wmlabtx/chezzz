@@ -117,6 +117,11 @@ The second-to-last version, still without the game level selection on the left:
 
 ![0124-1](https://github.com/user-attachments/assets/367a90c6-230a-451b-b502-ee590b60c1c1)
 
+A funny experiment. Moves are sorted not by evaluation but by pieces. They make decent hints to keep you from dozing off, but playing is noticeably harder.
+
+![image](https://github.com/user-attachments/assets/c1ab15db-511a-4c53-beae-3ba9ef006aa8)
+
+
 ### Links
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
