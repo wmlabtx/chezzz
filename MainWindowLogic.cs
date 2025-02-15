@@ -1,8 +1,6 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -19,18 +17,10 @@ public partial class MainWindow
     private readonly IProgress<string>? _status;
     private readonly string? _stockfishPath;
     private readonly SortedList<int, Move> _moves = new();
-    private int _currentIndex;
-    private int _requiredScore;
-    private static readonly int[] _predefinedScore = {
-        NEGATIVE_MATE,
-        -1000, -500, -400, -300, -250, -200, -150, -100, -50,
-        0,
-        50, 100, 150, 200, 250, 300, 400, 500, 1000,
-        POSITIVE_MATE
-    };
+
     private int _requiredTime;
     private static readonly int[] _predefinedTime = {
-        500, 1000, 1500, 2000, 2500, 3000, 4000, 5000
+        500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
     };
 
     private readonly SortedDictionary<string, string> _openings = new();
@@ -46,7 +36,6 @@ public partial class MainWindow
         Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - margin - Width) / 2;
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
 
-        UpdateRequiredScore();
         UpdateRequiredTime();
 
         GotoPlatform();
@@ -65,19 +54,8 @@ public partial class MainWindow
         }
 
         Advice.IsEnabled = false;
-        var countdownTask = UpdateButtonCountdown(_requiredTime);
         await AdviceAsync();
-        await countdownTask;
-        Advice.Content = "Advice [F1]";
         Advice.IsEnabled = true;
-    }
-
-    private async Task UpdateButtonCountdown(int timeMs)
-    {
-        for (var remaining = timeMs; remaining > 0; remaining -= 500) {
-            Advice.Content = $"Advice [{remaining / 1000.0:F1}]";
-            await Task.Delay(500);
-        }
     }
 
     [GeneratedRegex(@"<wc-chess-board[^>]*\bclass\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase)]
@@ -155,12 +133,12 @@ public partial class MainWindow
         return fen;
     }
 
-    private void GetFenFromChess(string decodedHtml, out string error, out char[,] board, out string fen)
+    private void GetFenFromChess(string decodedHtml, out string error, out bool isWhite, out char[,] board, out string fen)
     {
         error = string.Empty;
         board = new char[8, 8];
         fen = string.Empty;
-        var isWhite = true;
+        isWhite = true;
         var match = ChessBoardRegex().Match(decodedHtml);
         if (match.Success) {
             var classValue = match.Groups[1].Value;
@@ -227,7 +205,7 @@ public partial class MainWindow
         fen = GetFen(board, isWhite);
     }
 
-    private static void GetFenFromLiChess(string decodedHtml, out string error, out char[,] board, out string fen)
+    private static void GetFenFromLiChess(string decodedHtml, out string error, out bool isWhite, out char[,] board, out string fen)
     {
         error = string.Empty;
         board = new char[8, 8];
@@ -236,7 +214,7 @@ public partial class MainWindow
         // <div class="cg-wrap orientation-white manipulable"><cg-container style="width: 736px; height: 736px;">
         // <div class="cg-wrap orientation-black manipulable"><cg-container style="width: 736px; height: 736px;">
 
-        var isWhite = true;
+        isWhite = true;
         var regex = OrientationRegex();
         var m = regex.Match(decodedHtml);
         if (!m.Success) {
@@ -315,6 +293,38 @@ public partial class MainWindow
         fen = GetFen(board, isWhite);
     }
 
+    private static string GetPiece(string move, bool isWhite, char[,] board)
+    {
+        var col = move[0] - 'a';
+        var row = '8' - move[1];
+        var f = char.ToUpper(board[row, col]).ToString();
+        string piece;
+        if (isWhite) {
+            piece = f switch {
+                "P" => "",
+                "N" => "\u2658",
+                "B" => "\u2657",
+                "R" => "\u2656",
+                "Q" => "\u2655",
+                "K" => "\u2654",
+                _ => f
+            };
+        }
+        else {
+            piece = f switch {
+                "P" => "",
+                "N" => "\u265E",
+                "B" => "\u265D",
+                "R" => "\u265C",
+                "Q" => "\u265B",
+                "K" => "\u265A",
+                _ => f
+            };
+        }
+
+        return piece;
+    }
+
     private async Task AdviceAsync()
     {
         const string script = "document.documentElement.outerHTML";
@@ -324,12 +334,13 @@ public partial class MainWindow
         var error = string.Empty;
         var fen = string.Empty;
         var board = new char[8, 8];
+        var isWhite = true;
         switch (Platform.SelectionBoxItem) {
             case AppConsts.CHESS:
-                GetFenFromChess(decodedHtml, out error, out board, out fen);
+                GetFenFromChess(decodedHtml, out error, out isWhite, out board, out fen);
                 break;
             case AppConsts.LICHESS:
-                GetFenFromLiChess(decodedHtml, out error, out board, out fen);
+                GetFenFromLiChess(decodedHtml, out error, out isWhite, out board, out fen);
                 break;
         }
 
@@ -371,7 +382,7 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
         await inputWriter.FlushAsync();
 
-        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
+        await inputWriter.WriteLineAsync("setoption name MultiPV value 20");
         await inputWriter.FlushAsync();
 
         await inputWriter.WriteLineAsync("ucinewgame");
@@ -392,12 +403,9 @@ public partial class MainWindow
         await inputWriter.FlushAsync();
 
         _moves.Clear();
-        _currentIndex = -1;
-
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
             if (line.StartsWith("bestmove")) {
-                _status?.Report("Done");
                 break;
             }
 
@@ -416,6 +424,14 @@ public partial class MainWindow
 
                 if (parts[i].Equals("mate")) {
                     move.Score = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
+                    var mateScore = 20 - Math.Min(20, Math.Abs(int.Parse(parts[i + 1])));
+                    if (move.Score > 0) {
+                        move.Score += mateScore;
+                    }
+                    else {
+                        move.Score -= mateScore; 
+                    }
+
                     move.ScoreText = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
                     continue;
                 }
@@ -449,20 +465,11 @@ public partial class MainWindow
 
                 if (parts[i].Equals("pv")) {
                     move.FirstMove = parts[i + 1];
-                    var col = move.FirstMove[0] - 'a';
-                    var row = '8' - move.FirstMove[1];
-                    var f = char.ToUpper(board[row, col]).ToString();
-                    var u = f switch {
-                        "P" => "",
-                        "N" => "\u265E ",
-                        "B" => "\u265D ",
-                        "R" => "\u265C ",
-                        "Q" => "\u265B ",
-                        "K" => "\u265A ",
-                        _ => f,
-                    };
-
-                    move.FirstMove =  u + move.FirstMove;
+                    move.FirstPiece = GetPiece(move.FirstMove, isWhite, board);
+                    if (i + 2 < parts.Length) {
+                        move.SecondMove = parts[i + 2];
+                        move.SecondPiece = GetPiece(move.SecondMove, !isWhite, board);
+                    }
                 }
             }
 
@@ -474,8 +481,8 @@ public partial class MainWindow
             _moves[move.Index] = move;
         }
 
-        foreach (var move in _moves.Values) {
-            await inputWriter.WriteLineAsync($"position fen {fen} moves {move.FirstMove}");
+        foreach (var mv in _moves) {
+            await inputWriter.WriteLineAsync($"position fen {fen} moves {mv.Value.FirstMove}");
             await inputWriter.FlushAsync();
 
             await inputWriter.WriteLineAsync("d");
@@ -498,7 +505,7 @@ public partial class MainWindow
 
             if (!string.IsNullOrEmpty(newFen)) {
                 if (_openings.TryGetValue(newFen, out var opening)) {
-                    move.Opening = opening;
+                    _moves[mv.Key].Opening = opening;
                 }
             }
         }
@@ -511,88 +518,9 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
-        _currentIndex = GetCurrentIndex();
         ShowMoves();
-    }
 
-    private int GetCurrentIndex()
-    {
-        switch (_moves.Count) {
-            case 0:
-                return -1;
-            case 1:
-                return 0;
-        }
-
-        int index;
-        var moves = _moves
-            .Values
-            .OrderByDescending(move => move.Score)
-            .ToArray();
-        var goodMovesCount = moves.Count(move => move.Score >= _requiredScore - 25);
-        if (goodMovesCount == 0) {
-            var savingMovesCount = moves.Count(move => move.Score >= moves[0].Score - 25);
-            index = RandomNumberGenerator.GetInt32(0, savingMovesCount);
-            return index;
-        }
-
-        index = 0;
-        var minDiff = int.MaxValue;
-        for ( var i = 0; i < goodMovesCount; i++) {
-            var diff = Math.Abs(moves[i].Score - _requiredScore) - RandomNumberGenerator.GetInt32(0, 25);
-            if (diff < minDiff) {
-                minDiff = diff;
-                index = i;
-            }
-        }
-
-        return index;
-    }
-
-    private void ChangeRequiredScore(int delta)
-    {
-        int index;
-        if (delta > 0) {
-            index = 0;
-            while (index < _predefinedScore.Length) {
-                if (_requiredScore == _predefinedScore[index]) {
-                    break;
-                }
-
-                if (_requiredScore > _predefinedScore[index] && _requiredScore < _predefinedScore[index + 1]) {
-                    break;
-                }
-
-                index++;
-            }
-
-            if (index < _predefinedScore.Length - 1) {
-                index++;
-            }
-        }
-        else {
-            index = _predefinedScore.Length - 1;
-            while (index >= 0) {
-                if (_requiredScore == _predefinedScore[index]) {
-                    break;
-                }
-
-                if (_requiredScore < _predefinedScore[index] && _requiredScore > _predefinedScore[index - 1]) {
-                    break;
-                }
-
-                index--;
-            }
-
-            if (index > 0) {
-                index--;
-            }
-        }
-
-        _requiredScore = _predefinedScore[index];
-        Settings.Default.RequiredScore = _requiredScore;
-        Settings.Default.Save();
-        UpdateRequiredScore();
+        _status?.Report($"Done. The best move: {_moves[0].FirstPiece}{_moves[0].FirstMove}; score: {_moves[0].ScoreText} (depth: {_moves[0].Depth})");
     }
 
     private void ChangeRequiredTime(int delta)

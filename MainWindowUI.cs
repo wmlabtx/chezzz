@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Color = System.Windows.Media.Color;
 
 namespace Chezzz;
 
@@ -35,48 +36,24 @@ public partial class MainWindow
         return Color.FromArgb(a, r, g, b);
     }
 
-    private static Color GetColor(int scoreValue, int minScoreNegative, int maxScorePositive)
+    private static Color GetColor(int scoreValue)
     {
-        switch (scoreValue) {
-            case NEGATIVE_MATE:
-                return Colors.DarkRed;
-            case POSITIVE_MATE:
-                return Colors.DarkGreen;
+        if (scoreValue <= NEGATIVE_MATE) {
+            return Colors.DarkRed;
         }
 
-        scoreValue = Math.Max(minScoreNegative, Math.Min(maxScorePositive, scoreValue));
+        if (scoreValue >= POSITIVE_MATE) {
+            return Colors.DarkGreen;
+        }
 
         double normalizedValue;
-        if (minScoreNegative == 0) {
-            minScoreNegative = Math.Min(-1000, scoreValue);
-        }
-
         if (scoreValue <= 0) {
-            normalizedValue = (double)scoreValue / minScoreNegative;
+            normalizedValue = (double)Math.Max(-500, scoreValue) / -500;
             return InterpolateColor(Colors.Gray, Colors.Red, normalizedValue);
         }
 
-        if (maxScorePositive == 0) {
-            maxScorePositive = Math.Max(1000, scoreValue);
-        }
-
-        normalizedValue = (double)scoreValue / maxScorePositive;
+        normalizedValue = (double)Math.Min(500, scoreValue) / 500;
         return InterpolateColor(Colors.Gray, Colors.Green, normalizedValue);
-    }
-
-    private void UpdateRequiredScore()
-    {
-        var requiredScoreText = _requiredScore switch {
-            POSITIVE_MATE => "MAX",
-            NEGATIVE_MATE => "MIN",
-            _ => _requiredScore < 0
-                ? $"-{Math.Abs(_requiredScore) / 100.0:F2}"
-                : $"+{_requiredScore / 100.0:F2}"
-        };
-
-        DescreaseScore.IsEnabled = _requiredScore > NEGATIVE_MATE;
-        IncreaseScore.IsEnabled = _requiredScore < POSITIVE_MATE;
-        RequiredScoreText.Text = requiredScoreText;
     }
 
     private void UpdateRequiredTime()
@@ -90,116 +67,113 @@ public partial class MainWindow
     {
         Panel.Children.Clear();
 
-        var moves = _moves.Values.OrderByDescending(move => move.Score).ToArray();
+        var groups = _moves.Values
+            .GroupBy(move => move.FirstMove[..2])
+            .Select(group => group.ToArray())
+            .OrderByDescending(list => list.First().Score)
+            .Where(group => _moves[0].Score - group.First().Score <= 100)
+            .ToArray();
 
-        var minScoreNegative = NEGATIVE_MATE;
-        var notmates = _moves.Values.Where(move => move.Score <= 0 && move.Score != NEGATIVE_MATE).ToArray();
-        if (notmates.Length > 0) {
-            minScoreNegative = notmates.Min(move => move.Score);
-        }
-
-        var maxScorePositive = POSITIVE_MATE;
-        notmates = _moves.Values.Where(move => move.Score >= 0 && move.Score != POSITIVE_MATE).ToArray();
-        if (notmates.Length > 0) {
-            maxScorePositive = notmates.Max(move => move.Score);
-        }
-
-        foreach (var move in moves) {
-            var color = GetColor(move.Score, minScoreNegative, maxScorePositive);
-            var darkenColor = DarkenColor(color, 0.5);
-            var ligthenColor = LigthenColor(color, 0.5);
-            var gradient = new LinearGradientBrush {
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(0, 1),
-                GradientStops = {
-                    new GradientStop(ligthenColor, 0),
-                    new GradientStop(color, 0.4),
-                    new GradientStop(darkenColor, 0.8),
-                    new GradientStop(darkenColor, 1)
-                }
-            };
-
-            var grid = new Grid();
-            if (string.IsNullOrEmpty(move.Opening)) {
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            }
-            else {
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            }
-
-            var scoreTextBlock = new TextBlock {
-                Text = move.ScoreText,
+        foreach (var group in groups) {
+            var bestMove = group.First();
+            var groupLabel = new Label {
+                Content = $"{bestMove.FirstPiece}{bestMove.FirstMove[..2]}",
                 Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 0, 0)
+                Margin = new Thickness(4, 0, 0, 0)
             };
 
-            var wdlTextBlock = new TextBlock {
-                Text = move.Forecast,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 4, 0)
-            };
+            Panel.Children.Add(groupLabel);
+            foreach (var move in group) {
+                var color = GetColor(move.Score);
+                var darkenColor = DarkenColor(color, 0.5);
+                var ligthenColor = LigthenColor(color, 0.5);
+                var gradient = new LinearGradientBrush {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(0, 1),
+                    GradientStops = {
+                        new GradientStop(ligthenColor, 0),
+                        new GradientStop(color, 0.4),
+                        new GradientStop(darkenColor, 0.8),
+                        new GradientStop(darkenColor, 1)
+                    }
+                };
 
-            var firstmoveTextBlock = new TextBlock {
-                Text = move.FirstMove,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 4, 0)
-            };
+                var grid = new Grid {
+                    Margin = new Thickness(4, 0, 4, 0)
+                };
 
-            var openingTextBlock = new TextBlock {
-                Text = move.Opening,
-                Foreground = Brushes.White,
-                Padding = new Thickness(4, 0, 4, 0)
-            };
-
-            if (string.IsNullOrEmpty(move.Opening)) {
-                scoreTextBlock.SetValue(Grid.ColumnProperty, 0);
-                wdlTextBlock.SetValue(Grid.ColumnProperty, 1);
-                firstmoveTextBlock.SetValue(Grid.ColumnProperty, 2);
-
+                var column = 0;
+                
+                var scoreTextBlock = new TextBlock {
+                    Text = move.ScoreText,
+                    Foreground = Brushes.White,
+                    Padding = new Thickness(0, 0, 0, 0)
+                };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                scoreTextBlock.SetValue(Grid.ColumnProperty, column++);
                 grid.Children.Add(scoreTextBlock);
+
+                var wdlTextBlock = new TextBlock {
+                    Text = move.Forecast,
+                    Foreground = Brushes.White,
+                    Padding = new Thickness(4, 0, 0, 0)
+                };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                wdlTextBlock.SetValue(Grid.ColumnProperty, column++);
                 grid.Children.Add(wdlTextBlock);
-                grid.Children.Add(firstmoveTextBlock);
-            }
-            else {
-                firstmoveTextBlock.SetValue(Grid.ColumnProperty, 0);
-                openingTextBlock.SetValue(Grid.ColumnProperty, 1);
 
-                grid.Children.Add(firstmoveTextBlock);
-                grid.Children.Add(openingTextBlock);
-            }
+                var firstMoveTextBlock = new TextBlock {
+                    Text = $"{move.FirstPiece}{move.FirstMove}",
+                    Foreground = Brushes.White,
+                    Padding = new Thickness(4, 0, 0, 0)
+                };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                firstMoveTextBlock.SetValue(Grid.ColumnProperty, column++);
+                grid.Children.Add(firstMoveTextBlock);
 
-            var moveLabel = new Label {
-                Margin = new Thickness(0, 0, 2, 0),
-                BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(color),
-                Content = grid,
-                Background = gradient,
-            };
+                if (!string.IsNullOrEmpty(move.Opening)) {
+                    var openingTextBlock = new TextBlock {
+                        Text = move.Opening,
+                        Foreground = Brushes.White,
+                        Padding = new Thickness(4, 0, 0, 0)
+                    };
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    openingTextBlock.SetValue(Grid.ColumnProperty, column);
+                    grid.Children.Add(openingTextBlock);
+                }
+                else if (!string.IsNullOrEmpty(move.SecondMove)) {
+                    var secondMoveTextBlock = new TextBlock {
+                        Text = $"\u2026{move.SecondPiece}{move.SecondMove}?",
+                        Foreground = Brushes.White,
+                        Padding = new Thickness(4, 0, 0, 0)
+                    };
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    secondMoveTextBlock.SetValue(Grid.ColumnProperty, column);
+                    grid.Children.Add(secondMoveTextBlock);
+                }
 
-            if (move.Index == _currentIndex) {
-                Panel.Children.Add(moveLabel);
-            }
-            else {
+                var tooltip = new ToolTip {
+                    Content = grid,
+                    Background = gradient
+                };
+
                 var moveButton = new Button {
-                    Margin = new Thickness(0, 0, 2, 0),
+                    Margin = new Thickness(1, 0, 0, 0),
                     BorderThickness = new Thickness(1),
                     BorderBrush = new SolidColorBrush(color),
                     Background = gradient,
-                    Content = string.IsNullOrEmpty(move.Opening) ? "" : "B",
-                    MinWidth = 8,
+                    Content = move.FirstMove.Substring(2, 2),
                     Foreground = Brushes.White,
+                    Width = 21,
+                    HorizontalContentAlignment = HorizontalAlignment.Center,
                     Cursor = Cursors.Hand,
                     Tag = move,
-                    ToolTip = moveLabel
+                    ToolTip = tooltip
                 };
 
                 moveButton.Click += (sender, e) => {
                     var buttonSender = (Button)sender;
                     var moveSender = (Move)buttonSender.Tag;
-                    _currentIndex = moveSender.Index;
                     ShowMoves();
                 };
 
@@ -209,4 +183,3 @@ public partial class MainWindow
         }
     }
 }
-

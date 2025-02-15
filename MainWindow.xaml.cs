@@ -19,7 +19,6 @@ namespace Chezzz
                 _status?.Report($"{_stockfishPath} not found");
             }
 
-            _requiredScore = Settings.Default.RequiredScore;
             _requiredTime = Settings.Default.RequiredTime;
         }
 
@@ -49,16 +48,6 @@ namespace Chezzz
         private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
             await WindowLoadedAsync();
-        }
-
-        private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
-        {
-            ChangeRequiredScore(-1);
-        }
-
-        private void IncreaseScore_OnClick(object sender, RoutedEventArgs e)
-        {
-            ChangeRequiredScore(+1);
         }
 
         private void DecreaseTime_OnClick(object sender, RoutedEventArgs e)

@@ -25,7 +25,7 @@ namespace Chezzz.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        [global::System.Configuration.DefaultSettingValueAttribute("1500")]
         public int RequiredTime {
             get {
                 return ((int)(this["RequiredTime"]));
@@ -37,13 +37,13 @@ namespace Chezzz.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("150")]
-        public int RequiredScore {
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int RequiredLevel {
             get {
-                return ((int)(this["RequiredScore"]));
+                return ((int)(this["RequiredLevel"]));
             }
             set {
-                this["RequiredScore"] = value;
+                this["RequiredLevel"] = value;
             }
         }
     }
