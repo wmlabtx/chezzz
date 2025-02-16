@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -17,10 +18,21 @@ public partial class MainWindow
     private readonly IProgress<string>? _status;
     private readonly string? _stockfishPath;
     private readonly SortedList<int, Move> _moves = new();
+    private Move[] _movesScope;
 
     private int _requiredTime;
     private static readonly int[] _predefinedTime = {
-        500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
+        100, 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
+    };
+
+    private int _selectedIndex;
+    private int _requiredScore;
+    private static readonly int[] _predefinedScore = {
+        NEGATIVE_MATE,
+        -1000, -500, -400, -300, -250, -200, -150, -100, -50, -25,
+        0,
+        25, 50, 100, 150, 200, 250, 300, 400, 500, 1000,
+        POSITIVE_MATE
     };
 
     private readonly SortedDictionary<string, string> _openings = new();
@@ -37,6 +49,7 @@ public partial class MainWindow
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
 
         UpdateRequiredTime();
+        UpdateRequiredScore();
 
         GotoPlatform();
 
@@ -382,7 +395,7 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
         await inputWriter.FlushAsync();
 
-        await inputWriter.WriteLineAsync("setoption name MultiPV value 20");
+        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
         await inputWriter.FlushAsync();
 
         await inputWriter.WriteLineAsync("ucinewgame");
@@ -402,7 +415,9 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync($"go movetime {_requiredTime}");
         await inputWriter.FlushAsync();
 
+        _selectedIndex = -1;
         _moves.Clear();
+        _movesScope = Array.Empty<Move>();
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
             if (line.StartsWith("bestmove")) {
@@ -518,9 +533,58 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
+        SetSelectedIndex();
         ShowMoves();
 
-        _status?.Report($"Done. The best move: {_moves[0].FirstPiece}{_moves[0].FirstMove}; score: {_moves[0].ScoreText} (depth: {_moves[0].Depth})");
+        _status?.Report($"Done. Recommended move: {_moves[_selectedIndex].FirstPiece}{_moves[_selectedIndex].FirstMove}; score: {_moves[_selectedIndex].ScoreText} (depth: {_moves[_selectedIndex].Depth})");
+    }
+
+    private void SetSelectedIndex()
+    {
+        switch (_moves.Count) {
+            case 0:
+                _selectedIndex = -1;
+                return;
+            case 1:
+                _selectedIndex = 0;
+                return;
+        }
+
+        var target = _requiredScore;
+        if (target is >= POSITIVE_MATE or <= NEGATIVE_MATE) {
+            target *= 2;
+        }
+
+        _movesScope = _moves
+            .Values
+            .Where(move => move.Score >= target)
+            .OrderBy(move => Math.Abs(move.Score - target))
+            .Take(10)
+            .ToArray();
+
+        if (_movesScope.Length == 0) {
+            _movesScope = _moves
+                .Values
+                .Where(move => move.Score < target)
+                .OrderBy(move => Math.Abs(move.Score - target))
+                .Take(10)
+                .ToArray();
+        }
+
+        var index = 0;
+        while (index < _movesScope.Length) {
+            if (RandomNumberGenerator.GetInt32(0,5) > 0) {
+                break;
+            }
+
+            index++;
+        }
+
+        if (index >= _movesScope.Length) {
+            index = _movesScope.Length - 1;
+        }
+
+        _selectedIndex = _movesScope[index].Index;
     }
 
     private void ChangeRequiredTime(int delta)
@@ -567,6 +631,52 @@ public partial class MainWindow
         Settings.Default.RequiredTime = _requiredTime;
         Settings.Default.Save();
         UpdateRequiredTime();
+    }
+
+    private void ChangeRequiredScore(int delta)
+    {
+        int index;
+        if (delta > 0) {
+            index = 0;
+            while (index < _predefinedScore.Length) {
+                if (_requiredScore == _predefinedScore[index]) {
+                    break;
+                }
+
+                if (_requiredScore > _predefinedScore[index] && _requiredScore < _predefinedScore[index + 1]) {
+                    break;
+                }
+
+                index++;
+            }
+
+            if (index < _predefinedScore.Length - 1) {
+                index++;
+            }
+        }
+        else {
+            index = _predefinedScore.Length - 1;
+            while (index >= 0) {
+                if (_requiredScore == _predefinedScore[index]) {
+                    break;
+                }
+
+                if (_requiredScore < _predefinedScore[index] && _requiredScore > _predefinedScore[index - 1]) {
+                    break;
+                }
+
+                index--;
+            }
+
+            if (index > 0) {
+                index--;
+            }
+        }
+
+        _requiredScore = _predefinedScore[index];
+        Settings.Default.RequiredScore = _requiredScore;
+        Settings.Default.Save();
+        UpdateRequiredScore();
     }
 
     private static List<string> ParseCsvLine(string line)

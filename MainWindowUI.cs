@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using Chezzz.Properties;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -63,15 +64,34 @@ public partial class MainWindow
         RequiredTimeText.Text = $"{_requiredTime / 1000.0:F1}s";
     }
 
+    private void UpdateRequiredScore()
+    {
+        var requiredScoreText = _requiredScore switch {
+            POSITIVE_MATE => "MAX",
+            NEGATIVE_MATE => "MIN",
+            _ => _requiredScore < 0
+                ? $"-{Math.Abs(_requiredScore) / 100.0:F2}"
+                : $"+{_requiredScore / 100.0:F2}"
+        };
+
+        DescreaseScore.IsEnabled = _requiredScore > NEGATIVE_MATE;
+        IncreaseScore.IsEnabled = _requiredScore < POSITIVE_MATE;
+        RequiredScoreText.Text = requiredScoreText;
+    }
+
     private void ShowMoves()
     {
         Panel.Children.Clear();
 
-        var groups = _moves.Values
+        if (_movesScope.Length == 0) {
+            _movesScope = _moves.Values.Take(10).ToArray();
+        }
+
+        var groups = _movesScope
+            .OrderByDescending(move => move.Score)
             .GroupBy(move => move.FirstMove[..2])
             .Select(group => group.ToArray())
             .OrderByDescending(list => list.First().Score)
-            .Where(group => _moves[0].Score - group.First().Score <= 100)
             .ToArray();
 
         foreach (var group in groups) {
@@ -81,6 +101,13 @@ public partial class MainWindow
                 Foreground = Brushes.White,
                 Margin = new Thickness(4, 0, 0, 0)
             };
+
+            if (
+                _selectedIndex >= 0 && 
+                _selectedIndex < _moves.Count && 
+                bestMove.FirstMove[..2].Equals(_moves[_selectedIndex].FirstMove[..2])) {
+                groupLabel.Foreground = Brushes.Yellow;
+            }
 
             Panel.Children.Add(groupLabel);
             foreach (var move in group) {
@@ -171,9 +198,19 @@ public partial class MainWindow
                     ToolTip = tooltip
                 };
 
+                if (move.Index == _selectedIndex) {
+                    moveButton.BorderThickness = new Thickness(2);
+                    moveButton.BorderBrush = new SolidColorBrush(Colors.Yellow);
+                    moveButton.Foreground = Brushes.Yellow;
+                }
+
                 moveButton.Click += (sender, e) => {
                     var buttonSender = (Button)sender;
                     var moveSender = (Move)buttonSender.Tag;
+                    _requiredScore = moveSender.Score;
+                    Settings.Default.RequiredScore = _requiredScore;
+                    Settings.Default.Save();
+                    UpdateRequiredScore();
                     ShowMoves();
                 };
 

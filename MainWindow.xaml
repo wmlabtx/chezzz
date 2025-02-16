@@ -75,11 +75,14 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
+
             <StatusBarItem Grid.Column="0">
                 <Label BorderThickness="1" ToolTip="Required time">
                     <Label.BorderBrush>
@@ -113,6 +116,38 @@
                 </Grid>
             </StatusBarItem>
             <StatusBarItem Grid.Column="2">
+                <Label BorderThickness="1" ToolTip="Score">
+                    <Label.BorderBrush>
+                        <SolidColorBrush Color="DimGray"/>
+                    </Label.BorderBrush>
+                    <Grid>
+                        <TextBlock Name="RequiredScoreText" Text="+1.0" Foreground="White"/>
+                    </Grid>
+                </Label>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="3">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <RepeatButton Grid.Row="0" Name="IncreaseScore" Style="{StaticResource ArrowButtonStyle}" Click="IncreaseScore_OnClick">
+                        <Border Width="10" Height="10">
+                            <Viewbox Width="5" Height="5">
+                                <Path Data="M 0,6 L 5,0 10,6" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RepeatButton}}" StrokeThickness="2" Stretch="Uniform"/>
+                            </Viewbox>
+                        </Border>
+                    </RepeatButton>
+                    <RepeatButton Grid.Row="1" Name="DescreaseScore" Style="{StaticResource ArrowButtonStyle}" Click="DecreaseScore_OnClick">
+                        <Border Width="10" Height="10" BorderThickness="2" CornerRadius="20">
+                            <Viewbox Width="5" Height="5">
+                                <Path Data="M 0,0 L 5,6 10,0" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RepeatButton}}" StrokeThickness="2" Stretch="Uniform"/>
+                            </Viewbox>
+                        </Border>
+                    </RepeatButton>
+                </Grid>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="4">
                 <WrapPanel Name="Panel" DockPanel.Dock="Bottom">
                     <Label Content="Pick the move time and click 'Advice' or press F1 during you move" Foreground="White"></Label>
                 </WrapPanel>

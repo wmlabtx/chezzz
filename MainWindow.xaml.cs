@@ -20,6 +20,7 @@ namespace Chezzz
             }
 
             _requiredTime = Settings.Default.RequiredTime;
+            _requiredScore = Settings.Default.RequiredScore;
         }
 
         private void GotoPlatform()
@@ -58,6 +59,16 @@ namespace Chezzz
         private void IncreaseTime_OnClick(object sender, RoutedEventArgs e)
         {
             ChangeRequiredTime(+1);
+        }
+
+        private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredScore(-1);
+        }
+
+        private void IncreaseScore_OnClick(object sender, RoutedEventArgs e)
+        {
+            ChangeRequiredScore(+1);
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
