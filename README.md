@@ -1,6 +1,6 @@
 ### Introduction
 
-![0 0 7-header-600x300](https://github.com/user-attachments/assets/7d45da2f-06b1-43cb-8610-d746f07206b4)
+![0 0 8-header-750x350](https://github.com/user-attachments/assets/eb2ba67f-a050-4e91-9603-badc751d7ce5)
 
 I really love playing chess. I've been playing 10-minute games on chess.com for a long time. But my rating is stuck around 1500. And it's all because I often 'blunder'. What if there was an advisor nearby, helping me avoid those silly blunders... What if I could integrate a chess engine to give suggestions in tough positions? It's not fair play, but using bots of any rating for training is allowed. So the idea is to set up the engine, somehow read the chess position from the browser, send it to the engine, and get a response in a reasonable time.
 
