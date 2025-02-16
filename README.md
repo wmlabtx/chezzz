@@ -1,6 +1,6 @@
 ### Introduction
 
-![github-780x440-2-preview](https://github.com/user-attachments/assets/1df99fbf-d793-405b-a2c3-312d5d5808b6)
+![0 0 8-header-750x350](https://github.com/user-attachments/assets/eb2ba67f-a050-4e91-9603-badc751d7ce5)
 
 I really love playing chess. I've been playing 10-minute games on chess.com for a long time. But my rating is stuck around 1500. And it's all because I often 'blunder'. What if there was an advisor nearby, helping me avoid those silly blunders... What if I could integrate a chess engine to give suggestions in tough positions? It's not fair play, but using bots of any rating for training is allowed. So the idea is to set up the engine, somehow read the chess position from the browser, send it to the engine, and get a response in a reasonable time.
 
@@ -33,44 +33,6 @@ Once the settings are done, I send the '**ucinewgame**' command to indicate a ne
 
 To get a position evaluation, you need to click the 'Advice' button in the status bar or press F1 during your move.
 
-![0126-1](https://github.com/user-attachments/assets/7df7de43-6aca-4b2b-98ea-9acbad298268)
-
-By default, the best move found in the current position is recommended (on the left). Other possible moves are displayed as colored bars. The better the move, the greener it is. Neutral moves are gray. Moves that worsen the position are red (they are on the right). You can hover the mouse over any move.
-
-![0126-2](https://github.com/user-attachments/assets/87e467a2-63cc-46d8-8c5e-ff448c1e0039)
-
-The worst moves, which lead to checkmate, are colored in maroon.
-
-![0126-3](https://github.com/user-attachments/assets/936fedfc-b02d-42fb-897d-52f32e6ef0b2)
-
-You can not only hover the mouse cursor but also click on any move.
-
-![0126-4](https://github.com/user-attachments/assets/643e15fa-27cc-40d4-bae2-a95839399183)
-
-It will look like this:
-
-![0126-5](https://github.com/user-attachments/assets/2b3e02de-497e-4efa-8ffe-e00cbd7f692d)
-
-The advisor remembers the evaluation of the move (in this case, +1.04) and from that point on will recommend moves close to that evaluation. This mechanism allows you to adjust the strength of play. That is, to play at roughly the same level as your opponent. Or stronger, or weaker — depending on which moves you click.
-
-You can also adjust the desired game strength at any time using the round buttons up and down — from "MAX" (choosing only the best move) to "MIN" (choosing the worst one). For example, you selected "-3.00":
-
-![0126-7](https://github.com/user-attachments/assets/63159988-b597-4dc2-9a31-0a030d3832d0)
-
-Only the best found move:
-
-![0126-9](https://github.com/user-attachments/assets/f10e878f-1a9b-430b-aba6-9c57557b90d0)
-
-Or the worst one:
-
-![0126-8](https://github.com/user-attachments/assets/47f734f2-a867-4d05-b634-6a7b3a6f08ff)
-
-The selected game strength is saved in the user profile (for example, in C:\Users\wmlab\AppData\Local\Chezzz\).
-
-The file **openings.csv** contains opening positions and their names. If the move is known in opening theory, its name or the symbol "B" is added
-
-![0202-1](https://github.com/user-attachments/assets/9839323e-9148-4b97-a9a6-3fe532e79708)
-
 The advisor supports both popular chess websites. You can switch between them at any time.
 
 ![0124-8](https://github.com/user-attachments/assets/b76ccd3e-774b-4207-8470-babc7be6a4b0)
@@ -88,6 +50,8 @@ The advisor itself is a portable application. It can be downloaded from **Releas
 ```
 
 ### Previous UI
+
+Over the course of a month, I tested several interface options on myself, from a simple status bar to the current version, which shows all possible moves with color coding. I found the latter option to be the most convenient and interesting. It allows you to avoid giving yourself away by only making the best moves and beating everyone, but instead to play at a level comparable to your opponent, slightly better or slightly worse, demonstrating natural, imperfect play. However, nothing stops you from crushing anyone with 'green' moves — it's all in your hands!
 
 Over the course of a month, I tested several interface options on myself, from a simple status bar to the current version, which shows all possible moves with color coding. I found the latter option to be the most convenient and interesting. It allows you to avoid giving yourself away by only making the best moves and beating everyone, but instead to play at a level comparable to your opponent, slightly better or slightly worse, demonstrating natural, imperfect play. However, nothing stops you from crushing anyone with 'green' moves — it's all in your hands!
 
@@ -117,10 +81,13 @@ The second-to-last version, still without the game level selection on the left:
 
 ![0124-1](https://github.com/user-attachments/assets/367a90c6-230a-451b-b502-ee590b60c1c1)
 
+Improved version with the option to select relative game strength and display opening variations.
+
+![0202-1](https://github.com/user-attachments/assets/2d2fdfb6-fedb-46a8-aa51-2dee3b121eef)
+
 A funny experiment. Moves are sorted not by evaluation but by pieces. They make decent hints to keep you from dozing off, but playing is noticeably harder.
 
 ![image](https://github.com/user-attachments/assets/c1ab15db-511a-4c53-beae-3ba9ef006aa8)
-
 
 ### Links
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
