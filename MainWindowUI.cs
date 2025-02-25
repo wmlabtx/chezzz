@@ -83,11 +83,11 @@ public partial class MainWindow
     {
         Panel.Children.Clear();
 
-        if (_movesScope.Length == 0) {
-            _movesScope = _moves.Values.Take(10).ToArray();
+        if (_selectedMoves.Length == 0) {
+            _selectedMoves = _moves.Values.Take(10).ToArray();
         }
 
-        var groups = _movesScope
+        var groups = _selectedMoves
             .OrderByDescending(move => move.Score)
             .GroupBy(move => move.FirstMove[..2])
             .Select(group => group.ToArray())
@@ -204,19 +204,84 @@ public partial class MainWindow
                     moveButton.Foreground = Brushes.Yellow;
                 }
 
-                moveButton.Click += (sender, e) => {
+                moveButton.Click += async (sender, e) => {
                     var buttonSender = (Button)sender;
                     var moveSender = (Move)buttonSender.Tag;
+                    _selectedIndex = moveSender.Index;
                     _requiredScore = moveSender.Score;
                     Settings.Default.RequiredScore = _requiredScore;
                     Settings.Default.Save();
                     UpdateRequiredScore();
                     ShowMoves();
+                    await AddArrow();
                 };
 
                 ToolTipService.SetInitialShowDelay(moveButton, 0);
                 Panel.Children.Add(moveButton);
             }
         }
+    }
+
+    private async Task RemoveArrow()
+    {
+        var script = $@"
+            var chessBoard = document.querySelector('{ChessBoardTag}');
+            if (chessBoard) {{
+                var existingSvg = document.getElementById('chezzz-arrow');
+                if (existingSvg) {{
+                    existingSvg.parentNode.removeChild(existingSvg);
+                }}
+            }}";
+
+        await WebBrowser.ExecuteScriptAsync(script);
+    }
+
+    private async Task AddArrow()
+    {
+        if (_selectedIndex < 0 || _selectedIndex >= _moves.Count) {
+            return;
+        }
+
+        var move = _moves[_selectedIndex];
+        var src = move.FirstMove[..2];
+        var dst = move.FirstMove[2..];
+        var x1 = (src[0] - 'a') * 12.5 + 6.25;
+        var x2 = (dst[0] - 'a') * 12.5 + 6.25;
+        var y1 = ('8' - src[1]) * 12.5 + 6.25;
+        var y2 = ('8' - dst[1]) * 12.5 + 6.25;
+        if (!isWhite) {
+            x1 = 100.0 - x1;
+            x2 = 100.0 - x2;
+            y1 = 100.0 - y1;
+            y2 = 100.0 - y2;
+        }
+
+        var dx = x2 - x1;
+        var dy = y1 - y2;
+        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2);
+        var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
+        const double headRadius = 1.5;
+        var point1X = x1 + headRadius;
+        var point2Y = y1 - length + headRadius * 2;
+        var point3X = x1 + headRadius * 2;
+        var point4Y = y1 - length;
+        var point5X = x1 - headRadius * 2;
+        var point6X = x1 - headRadius;
+        var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
+        var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill: rgb(255, 255, 0); opacity: 0.7;' /></svg>";
+        var script = $@"
+            var existingSvg = document.getElementById('chezzz-arrow');
+            if (existingSvg) {{
+                existingSvg.parentNode.removeChild(existingSvg);
+            }}
+            var chessBoard = document.querySelector('{ChessBoardTag}');
+            if (chessBoard) {{
+                var div = document.createElement('div');
+                div.setAttribute('id', 'chezzz-arrow');
+                div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9');
+                div.innerHTML = `{svgElement}`;
+                chessBoard.appendChild(div);
+            }}";
+        await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
     }
 }

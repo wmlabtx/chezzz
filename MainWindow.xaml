@@ -116,7 +116,7 @@
                 </Grid>
             </StatusBarItem>
             <StatusBarItem Grid.Column="2">
-                <Label BorderThickness="1" ToolTip="Score">
+                <Label BorderThickness="1" ToolTip="Score" Width="50">
                     <Label.BorderBrush>
                         <SolidColorBrush Color="DimGray"/>
                     </Label.BorderBrush>

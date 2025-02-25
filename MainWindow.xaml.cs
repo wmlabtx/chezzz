@@ -32,6 +32,12 @@ namespace Chezzz
                     if (WebBrowser != null) {
                         WebBrowser.Source = new Uri(url);
                     }
+
+                    ChessBoardTag = selectedPlatform switch {
+                        AppConsts.CHESS => "wc-chess-board",
+                        AppConsts.LICHESS => "cg-container",
+                        _ => ChessBoardTag
+                    };
                 }
             }
         }
