@@ -1,6 +1,6 @@
 ### Introduction
 
-![0 0 8-header-750x350](https://github.com/user-attachments/assets/eb2ba67f-a050-4e91-9603-badc751d7ce5)
+![0 1 0-header-750x350](https://github.com/user-attachments/assets/dc33a676-c3ba-4755-8b05-397c5638eda1)
 
 I really love playing chess. I've been playing 10-minute games on chess.com for a long time. But my rating is stuck around 1500. And it's all because I often 'blunder'. What if there was an advisor nearby, helping me avoid those silly blunders... What if I could integrate a chess engine to give suggestions in tough positions? It's not fair play, but using bots of any rating for training is allowed. So the idea is to set up the engine, somehow read the chess position from the browser, send it to the engine, and get a response in a reasonable time.
 
@@ -38,6 +38,11 @@ The advisor supports both popular chess websites. You can switch between them at
 ![0124-8](https://github.com/user-attachments/assets/b76ccd3e-774b-4207-8470-babc7be6a4b0)
 
 You can play either anonymously or in your account. All modes are supported — playing against people, bots, solving puzzles, and studies.
+
+The visualization of moves is supported on both sites (a yellow arrow for the suggested or manually selected move).
+
+![image](https://github.com/user-attachments/assets/b62b8331-5c9a-4194-954a-2abf362e7601)
+
 
 ### Configuring
 
