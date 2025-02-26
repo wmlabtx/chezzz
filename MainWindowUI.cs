@@ -1,5 +1,4 @@
-﻿using Chezzz.Properties;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -59,23 +58,25 @@ public partial class MainWindow
 
     private void UpdateRequiredTime()
     {
-        DescreaseTime.IsEnabled = _requiredTime > _predefinedTime[0];
-        IncreaseTime.IsEnabled = _requiredTime < _predefinedTime[^1];
-        RequiredTimeText.Text = $"{_requiredTime / 1000.0:F1}s";
+        DescreaseTime.IsEnabled = _requiredTime.CanDescreaseValue();
+        IncreaseTime.IsEnabled = _requiredTime.CanIncreaseValue();
+        var requiredTime = _requiredTime.GetValue();
+        var requiredTimeText = $"{requiredTime / 1000.0:F1}s";
+        RequiredTimeText.Text = requiredTimeText;
     }
 
     private void UpdateRequiredScore()
     {
-        var requiredScoreText = _requiredScore switch {
+        DescreaseScore.IsEnabled = _requiredScore.CanDescreaseValue();
+        IncreaseScore.IsEnabled = _requiredScore.CanIncreaseValue();
+        var requiredScore = _requiredScore.GetValue();
+        var requiredScoreText = requiredScore switch {
             POSITIVE_MATE => "MAX",
             NEGATIVE_MATE => "MIN",
-            _ => _requiredScore < 0
-                ? $"-{Math.Abs(_requiredScore) / 100.0:F2}"
-                : $"+{_requiredScore / 100.0:F2}"
+            _ => requiredScore < 0
+                ? $"-{Math.Abs(requiredScore) / 100.0:F2}"
+                : $"+{requiredScore / 100.0:F2}"
         };
-
-        DescreaseScore.IsEnabled = _requiredScore > NEGATIVE_MATE;
-        IncreaseScore.IsEnabled = _requiredScore < POSITIVE_MATE;
         RequiredScoreText.Text = requiredScoreText;
     }
 
@@ -83,11 +84,8 @@ public partial class MainWindow
     {
         Panel.Children.Clear();
 
-        if (_selectedMoves.Length == 0) {
-            _selectedMoves = _moves.Values.Take(10).ToArray();
-        }
-
-        var groups = _selectedMoves
+        var groups = _moves
+            .Values
             .OrderByDescending(move => move.Score)
             .GroupBy(move => move.FirstMove[..2])
             .Select(group => group.ToArray())
@@ -189,9 +187,7 @@ public partial class MainWindow
                     BorderThickness = new Thickness(1),
                     BorderBrush = new SolidColorBrush(color),
                     Background = gradient,
-                    Content = move.FirstMove.Substring(2, 2),
                     Foreground = Brushes.White,
-                    Width = 21,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
                     Cursor = Cursors.Hand,
                     Tag = move,
@@ -204,14 +200,18 @@ public partial class MainWindow
                     moveButton.Foreground = Brushes.Yellow;
                 }
 
+                if (_selectedMoves.Contains(move.Index)) {
+                    moveButton.Content = move.FirstMove.Substring(2, 2);
+                    moveButton.Width = 21;
+                }
+                else {
+                    moveButton.Width = 6;
+                }
+
                 moveButton.Click += async (sender, e) => {
                     var buttonSender = (Button)sender;
                     var moveSender = (Move)buttonSender.Tag;
                     _selectedIndex = moveSender.Index;
-                    _requiredScore = moveSender.Score;
-                    Settings.Default.RequiredScore = _requiredScore;
-                    Settings.Default.Save();
-                    UpdateRequiredScore();
                     ShowMoves();
                     await AddArrow();
                 };

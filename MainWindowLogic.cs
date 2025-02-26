@@ -5,43 +5,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
-using System.Windows.Threading;
-using Chezzz.Properties;
-using Microsoft.Web.WebView2.Core;
 using Path = System.IO.Path;
 
 namespace Chezzz;
 
 public partial class MainWindow
 {
-    private const int POSITIVE_MATE = 10000;
-    private const int NEGATIVE_MATE = -10000;
-
-    private readonly IProgress<string>? _status;
-    private readonly string? _stockfishPath;
-    private bool isWhite;
-    private string ChessBoardTag = "wc-chess-board";
-
-    private readonly SortedList<int, Move> _moves = new();
-    private Move[] _selectedMoves = Array.Empty<Move>();
-    private int _selectedIndex;
-
-    private int _requiredTime;
-    private static readonly int[] _predefinedTime = {
-        100, 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
-    };
-
-    private int _requiredScore;
-    private static readonly int[] _predefinedScore = {
-        NEGATIVE_MATE,
-        -1000, -500, -400, -300, -250, -200, -150, -100, -50, -25,
-        0,
-        25, 50, 100, 150, 200, 250, 300, 400, 500, 1000,
-        POSITIVE_MATE
-    };
-
-    private readonly SortedDictionary<string, string> _openings = new();
-
     private async Task WindowLoadedAsync()
     {
         const int margin = 10;
@@ -127,19 +96,19 @@ public partial class MainWindow
 
         var turn = isWhite ? "w" : "b";
         var castling = string.Empty;
-        if (board[7, 0] == 'R' && board[7, 4] == 'K') {
+        if (board[7, 7] == 'R' && board[7, 4] == 'K') {
             castling += "K";
         }
 
-        if (board[7, 7] == 'R' && board[7, 4] == 'K') {
+        if (board[7, 0] == 'R' && board[7, 4] == 'K') {
             castling += "Q";
         }
 
-        if (board[0, 0] == 'r' && board[0, 4] == 'k') {
+        if (board[0, 7] == 'r' && board[0, 4] == 'k') {
             castling += "k";
         }
 
-        if (board[0, 7] == 'r' && board[0, 4] == 'k') {
+        if (board[0, 0] == 'r' && board[0, 4] == 'k') {
             castling += "q";
         }
 
@@ -417,12 +386,12 @@ public partial class MainWindow
                 break;
         }
 
-        await inputWriter.WriteLineAsync($"go movetime {_requiredTime}");
+        var requiredTime = _requiredTime.GetValue();
+        await inputWriter.WriteLineAsync($"go movetime {requiredTime}");
         await inputWriter.FlushAsync();
 
         _selectedIndex = -1;
         _moves.Clear();
-        _selectedMoves = Array.Empty<Move>();
         await RemoveArrow();
         while ((line = await outputReader.ReadLineAsync()) != null) {
             
@@ -550,175 +519,109 @@ public partial class MainWindow
 
     private void SetSelectedIndex(int diff)
     {
+        _selectedMoves.Clear();
         switch (_moves.Count) {
             case 0:
                 _selectedIndex = -1;
                 return;
             case 1:
-                _selectedMoves = _moves.Values.ToArray();
+                _selectedMoves.Add(0);
                 _selectedIndex = 0;
                 return;
         }
 
-        const int MaxMoves = 5;
         const int MaxDiff = 25;
-        int maxScore;
-        int minScore;
-
-        if (_requiredScore >= 0) {
-            _selectedMoves = _moves
-                .Values
-                .Where(move => move.Score >= _requiredScore && move.Score <= _requiredScore + MaxDiff)
-                .ToArray();
-            if (_selectedMoves.Length == 0) {
-                _selectedMoves = _moves.Values.Where(move => move.Score >= _requiredScore).ToArray();
-                if (_selectedMoves.Length > 0) {
-                    minScore = _selectedMoves.Min(move => move.Score);
-                    _selectedMoves = _selectedMoves.Where(move => move.Score - minScore <= MaxDiff).ToArray();
-                }
-                else {
-                    _selectedMoves = _moves.Values.ToArray();
-                    maxScore = _selectedMoves.First().Score;
-                    _selectedMoves = _selectedMoves.Where(move => maxScore - move.Score <= MaxDiff).ToArray();
-                }
+        const int MaxMoves = 5;
+        int? minScore = null;
+        int? maxScore = null;
+        var requiredScore = _requiredScore.GetValue();
+        foreach (var move in _moves.Values) {
+            if (move.Score <= requiredScore + MaxDiff && move.Score >= requiredScore - MaxDiff && _selectedMoves.Count < MaxMoves) {
+                _selectedMoves.Add(move.Index);
             }
-        }
-        else {
-            _selectedMoves = _moves
-                .Values
-                .Where(move => move.Score <= _requiredScore && move.Score >= _requiredScore - MaxDiff)
-                .ToArray();
-            if (_selectedMoves.Length == 0) {
-                _selectedMoves = _moves.Values.Where(move => move.Score <= _requiredScore).ToArray();
-                if (_selectedMoves.Length > 0) {
-                    maxScore = _selectedMoves.Max(move => move.Score);
-                    _selectedMoves = _selectedMoves.Where(move => maxScore - move.Score <= MaxDiff).ToArray();
-                }
-                else {
-                    _selectedMoves = _moves.Values.ToArray();
-                    minScore = _selectedMoves.First().Score;
-                    _selectedMoves = _selectedMoves.Where(move => move.Score - minScore <= MaxDiff).ToArray();
-                }
+
+            if (move.Score >= requiredScore) {
+                minScore = move.Score;
+            }
+
+            if (move.Score <= requiredScore && maxScore == null) {
+                maxScore = move.Score;
             }
         }
 
-        _selectedMoves = _selectedMoves.Take(MaxMoves).ToArray();
+        if (_selectedMoves.Count == 0) {
+            if (requiredScore >= 0) {
+                if (minScore != null) {
+                    foreach (var move in _moves.Values) {
+                        if (move.Score <= minScore + MaxDiff && move.Score >= minScore && _selectedMoves.Count < MaxMoves) {
+                            _selectedMoves.Add(move.Index);
+                        }
+                    }
+                }
+                else {
+                    foreach (var move in _moves.Values) {
+                        if (move.Score <= maxScore && move.Score >= maxScore - MaxDiff && _selectedMoves.Count < MaxMoves) {
+                            _selectedMoves.Add(move.Index);
+                        }
+                    }
+                }
+            }
+            else {
+                if (maxScore != null) {
+                    foreach (var move in _moves.Values) {
+                        if (move.Score <= maxScore && move.Score >= maxScore - MaxDiff && _selectedMoves.Count < MaxMoves) {
+                            _selectedMoves.Add(move.Index);
+                        }
+                    }
+                }
+                else {
+                    foreach (var move in _moves.Values) {
+                        if (move.Score <= minScore + MaxDiff && move.Score >= minScore && _selectedMoves.Count < MaxMoves) {
+                            _selectedMoves.Add(move.Index);
+                        }
+                    }
+                }
+            }
+        }
 
-        var forwardMoves = new List<Move>();
-        foreach (var move in _selectedMoves) {
+        var forwardMoves = new List<int>();
+        foreach (var i in _selectedMoves) {
             switch (diff) {
                 case > 0: {
-                        if (move.FirstMove[3] > move.FirstMove[1]) {
-                            forwardMoves.Add(move);
+                        if (_moves[i].FirstMove[3] > _moves[i].FirstMove[1]) {
+                            forwardMoves.Add(i);
                         }
                         break;
                     }
                 case < 0: {
-                        if (move.FirstMove[3] < move.FirstMove[1]) {
-                            forwardMoves.Add(move);
+                        if (_moves[i].FirstMove[3] < _moves[i].FirstMove[1]) {
+                            forwardMoves.Add(i);
                         }
                         break;
                     }
             }
         }
 
+        int random;
         if (forwardMoves.Count > 0) {
-            _selectedMoves = forwardMoves.ToArray();
+            random = RandomNumberGenerator.GetInt32(0, forwardMoves.Count);
+            _selectedIndex = forwardMoves[random];
         }
-
-        var random = RandomNumberGenerator.GetInt32(0, _selectedMoves.Length);
-        _selectedIndex = _selectedMoves[random].Index;
+        else {
+            random = RandomNumberGenerator.GetInt32(0, _selectedMoves.Count);
+            _selectedIndex = _selectedMoves.ElementAt(random);
+        }
     }
 
     private void ChangeRequiredTime(int delta)
     {
-        int index;
-        if (delta > 0) {
-            index = 0;
-            while (index < _predefinedTime.Length) {
-                if (_requiredTime == _predefinedTime[index]) {
-                    break;
-                }
-
-                if (_requiredTime > _predefinedTime[index] && _requiredTime < _predefinedTime[index + 1]) {
-                    break;
-                }
-
-                index++;
-            }
-
-            if (index < _predefinedTime.Length - 1) {
-                index++;
-            }
-        }
-        else {
-            index = _predefinedTime.Length - 1;
-            while (index >= 0) {
-                if (_requiredTime == _predefinedTime[index]) {
-                    break;
-                }
-
-                if (_requiredTime < _predefinedTime[index] && _requiredTime > _predefinedTime[index - 1]) {
-                    break;
-                }
-
-                index--;
-            }
-
-            if (index > 0) {
-                index--;
-            }
-        }
-
-        _requiredTime = _predefinedTime[index];
-        Settings.Default.RequiredTime = _requiredTime;
-        Settings.Default.Save();
+        _requiredTime.ChangeValue(delta);
         UpdateRequiredTime();
     }
 
     private async void ChangeRequiredScore(int delta)
     {
-        int index;
-        if (delta > 0) {
-            index = 0;
-            while (index < _predefinedScore.Length) {
-                if (_requiredScore == _predefinedScore[index]) {
-                    break;
-                }
-
-                if (_requiredScore > _predefinedScore[index] && _requiredScore < _predefinedScore[index + 1]) {
-                    break;
-                }
-
-                index++;
-            }
-
-            if (index < _predefinedScore.Length - 1) {
-                index++;
-            }
-        }
-        else {
-            index = _predefinedScore.Length - 1;
-            while (index >= 0) {
-                if (_requiredScore == _predefinedScore[index]) {
-                    break;
-                }
-
-                if (_requiredScore < _predefinedScore[index] && _requiredScore > _predefinedScore[index - 1]) {
-                    break;
-                }
-
-                index--;
-            }
-
-            if (index > 0) {
-                index--;
-            }
-        }
-
-        _requiredScore = _predefinedScore[index];
-        Settings.Default.RequiredScore = _requiredScore;
-        Settings.Default.Save();
+        _requiredScore.ChangeValue(delta);
         UpdateRequiredScore();
         SetSelectedIndex(isWhite ? 1 : -1);
         ShowMoves();
