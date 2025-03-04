@@ -212,6 +212,8 @@ public partial class MainWindow
                     var buttonSender = (Button)sender;
                     var moveSender = (Move)buttonSender.Tag;
                     _selectedIndex = moveSender.Index;
+                    _requiredScore.SetValue(moveSender.Score);
+                    UpdateRequiredScore();
                     ShowMoves();
                     await AddArrow();
                 };

@@ -44,13 +44,13 @@ public class Board
         ClearPosition(position.Y, position.X);
     }
 
-    private Piece? GetPiece(int y, int x)
+    public Piece? GetPiece(int y, int x)
     {
         var piece = _pieces[y, x];
         return piece.Type == '.' ? null : piece;
     }
 
-    private Piece? GetPiece(Position position)
+    public Piece? GetPiece(Position position)
     {
         return GetPiece(position.Y, position.X);
     }
@@ -193,20 +193,6 @@ public class Board
                             break;
                         case "=n":
                             move.PromotionPieceType = 'n';
-                            break;
-                    }
-                    break;
-                case "9":
-                    switch (group.Value) {
-                        case "+":
-                             move.IsCheck = true;
-                            break;
-                        case "#":
-                            move.IsCheck = true;
-                            move.IsMate = true;
-                            break;
-                        case "$":
-                            move.IsMate = true;
                             break;
                     }
                     break;
@@ -598,8 +584,7 @@ public class Board
             return false;
         }
 
-        if (Math.Abs(v) == 1 && Math.Abs(h) == 1) // Capture attempt
-        {
+        if (Math.Abs(v) == 1 && Math.Abs(h) == 1) {
             var piece = GetPiece(new Position(move.To.Y - v, move.To.X));
             if (piece != null && piece.Color != move.Piece.Color && piece.Type == 'p') {
                 return LastMoveEnPassantPosition() == move.To;
@@ -735,7 +720,6 @@ public class Board
 
     private bool QueenValidation(Move move)
     {
-        // For queen just using va lidation of bishop OR rook
         return BishopValidation(move) || RookValidation(move);
     }
 }

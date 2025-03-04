@@ -15,9 +15,6 @@ public class Move
     public Position From { get; set; }
     public Position To { get; set; }
 
-    public bool IsCheck { get; set; }
-    public bool IsMate { get; set; }
-
     public Move()
     {
         Piece = null;
@@ -28,7 +25,5 @@ public class Move
         PromotionPieceType = '.';
         From = new Position();
         To = new Position();
-        IsCheck = false;
-        IsMate = false;
     }
 }

@@ -28,8 +28,6 @@ public partial class MainWindow
         GotoPlatform();
 
         await Task.Run(ReadOpeningBook);
-
-        Tests.Tests.Run();
     }
 
     private async void GoAdvice()
@@ -55,7 +53,7 @@ public partial class MainWindow
 
         var error = string.Empty;
         var fen = string.Empty;
-        var board = new char[8, 8];
+        var board = new San.Board();
         isWhite = true;
         switch (Platform.SelectionBoxItem) {
             case AppConsts.CHESS:
@@ -70,6 +68,8 @@ public partial class MainWindow
             _status?.Report(error);
             return;
         }
+
+        Fen.Text = fen;
 
         var stockfish = new Process {
             StartInfo = new ProcessStartInfo {

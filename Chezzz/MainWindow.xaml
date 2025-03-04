@@ -51,6 +51,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                     </Grid>
                 </ItemsPanelTemplate>
@@ -62,6 +63,9 @@
                 <TextBlock Name="Status" />
             </StatusBarItem>
             <StatusBarItem Grid.Column="2">
+                <TextBox Name="Fen" Text="?" IsReadOnly="True" Background="White" BorderThickness="0" Padding="6 0 6 0" FontFamily="Tahoma" />
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="3">
                 <ComboBox Name="Platform" SelectedIndex="0" SelectionChanged="Platform_SelectionChanged">
                     <ComboBoxItem Content="{x:Static chezzz:AppConsts.CHESS}"/>
                     <ComboBoxItem Content="{x:Static chezzz:AppConsts.LICHESS}" />
