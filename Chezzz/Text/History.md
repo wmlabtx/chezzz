@@ -13,7 +13,7 @@ The final version looks like this — a simple WPF application with a single win
 
 The ancient WebBrowser WPF control still relies on Internet Explorer libraries, which are incompatible with modern web pages. Something newer is needed — Chromium or Edge (which is also Chromium, but with a different shell). There are libraries available for both options. My main browser is Microsoft Edge, so I install the component from Microsoft itself — Microsoft.Web.WebView2, via NuGet.
 
-![[Pasted image 20250302175652.png]]
+![Pasted image 20250302175652](https://github.com/user-attachments/assets/80cd9583-a2d9-4d35-be06-f1ff530f3a8c)
 
 Now everything is working. I even logged into my account, closed the app, launched it again — and I'm still logged into my account. So cookies and sessions are supported. Wonderful. However, working with the DOM like before won't be possible. In WebView2, you can't just access the HtmlDocument and DOM like in the good old days. The world has changed, pages are dynamic, so we view the content differently.
 ```C#
@@ -47,7 +47,9 @@ The presence of a `flipped` class suggests that the board is turned over. You ca
 I downloaded the binary version **stockfish-windows-x86-64-avx2.exe** [from here](https://stockfishchess.org/download/). It doesn't require installation and can be placed in any folder. When launched, you see an empty console window. 
 
 Always start the dialogue with the command "**uci**". The engine provides information about itself and ends the output with the marker word "**uciok**". Next, it's advisable to specify the number of threads to improve performance (by default, one thread is used) with the command "**setoption name Threads value XXXX**". After finishing the settings, send the command "**ucinewgame**", which means a new game. Then, you need to specify the position for analysis, "**position fen XXXX**", where XXXX is the encoded position. I will explain the format below. And request to accept it with the command "**isready**". If everything is in order, the engine will respond with "**readyok**". Finally, we need to start the analysis with the command **go** with parameters. I used "**go movetime XXXX**", where XXXX is the number of milliseconds given for thinking.
-![[Pasted image 20250302185139.png]]
+
+![Pasted image 20250302185139](https://github.com/user-attachments/assets/d6ffd838-d670-4b97-b873-bd614c85d87e)
+
 After this, the engine starts evaluating options (dumping a lot of interesting information into the console, such as the assessment of the current position), and it ends with the message "**bestmove XXXX**" (the best move found). This is what I will display in the status bar. Then the stream and the child process can be closed. What is the heck FEN encoded string?
 
 # `"rnbqkbnr/.../RNBQKBNR w KQkq - 0 1"`???
@@ -57,7 +59,9 @@ A FEN position consists of a description of eight ranks, separated by slashes. F
 Then comes an information block of six fields. Why are they needed if the position is clear? In fact, it's not. In a position taken from the middle of a game, additional information is missing. The first field "**w**" indicates it's white's turn, or "**b**" for black's turn. Then we must list possible castling (there are four - "**KQkq**", two for each side) or "**-**" if castling is unavailable. For example, a king may move before castling and later return to its square. The position will look "innocent," but the possibility of castling is already lost since the king has moved. Next, we must indicate if there are *en passant* captures, which is not always clear from the position. The penultimate field is the half move clock. This is needed to determine a draw if there have been no pawn movements or captures for a long time. The last field indicates the number of full moves (i.e., a move for both black and white). To be honest, it's unclear where to get them from. A simple board with pieces doesn't provide such information. In the first version, I always state "**- - 0 1**". This is generally inaccurate, castling will never be offered, but it's reliable and suitable for the first version. Later, I corrected this (opening the gates of hell). For details on FEN, I refer to the [FEN description](https://www.chess.com/terms/fen-chess). 
 
 So, we read the pieces from the page, encoded the position in FEN (for now, just the pieces themselves, without additional information), passed it to Stockfish, received "**bestmove XXXX**", and displayed it in the status bar.
-![[header.png]]
+
+![header](https://github.com/user-attachments/assets/2a0636e2-a9a9-4c4d-b54e-3807bc5634f3)
+
 Is the task solved? No.
 
 # Stockfish plays TOO well
@@ -77,15 +81,20 @@ Skill(int skill_level, int uci_elo) {
     ...
 ```
 To begin with, I discovered the setting "**set option name MultiPV value N**". It instructs Stockfish to return not only the best move but also the top N moves, sorted in descending order. Additionally, for each move, you can return the WDL ("win-draw-loss") statistics "**setoption name UCI_ShowWDL value true**". These are three numbers that add up to one hundred, for example, "30-60-10", which allows you to roughly calculate the probability of winning or losing. Shall we try the top three moves to start?
-![[header-github-2.png]]
+
+![header-github-2](https://github.com/user-attachments/assets/891f0a26-4678-4437-8727-8fa51f2fb15f)
+
 But, only three possible moves don't make me happy.
 
 # I Want to See All the Moves
 
 Three options of varying strength are better than one. But if we already know the evaluation of each move, let's specify the desired level in the settings, for example, "+3.00" (an advantage of a extra bishop) or "-1.00" (let the opponent have an extra pawn). At the same time, let's color the move in different shades - from red to green. And instead of showing the top three moves, let's show them all!
-![[0126-2.png]]
+
+![0126-2](https://github.com/user-attachments/assets/01230f76-668c-4437-af14-245888cf862b)
+
 To avoid being annoyed by ridiculous opening moves, I compiled a book of openings from various sources into a single .csv file (a relatively small amount, about 3000 positions). If a move is present in theory, its name can be displayed.
-![[Pasted image 20250303081904.png]]
+
+![Pasted image 20250303081904](https://github.com/user-attachments/assets/708552f5-76c8-4f49-83be-cfc4df355cba)
 
 # Why only chess.com?
 
@@ -96,7 +105,8 @@ At this point, I bragged on one of the platforms. One of the commenters mentione
 <piece class="black bishop" style="transform: translate(174px, 0px);"></piece><piece class="black queen" style="transform: translate(174px, 87px);"></piece><piece class="black king" style="transform: translate(522px, 0px);"></piece>
 ```
 The logic remains the same in other respects. You can choose between the sites at any time.
-![[0124-8.png]]
+
+![0124-8](https://github.com/user-attachments/assets/024e3348-d70d-4fe1-8054-6aa6f51d4f1b)
 
 # I need an advisor, not a dictator
 
@@ -110,14 +120,18 @@ var groups = _moves
 	.OrderByDescending(list => list.First().Score)
 	.ToArray();
 ```
-![[Pasted image 20250303113537.png]]
+![Pasted image 20250303113537](https://github.com/user-attachments/assets/42460e43-036c-4b5f-890e-bd135f21f71d)
+
 Looking for a move this way is faster, but the design is overloaded; there are too many repeating symbols. So I decided to discard them. After all, the first half of the move for the piece is the same.
 
 Thus, we have approached the current interface.
-![[0.1.2-1.png]]
+
+![0 1 2-1](https://github.com/user-attachments/assets/2fb4aac8-b27f-42d0-809d-4fd6e4da6b8e)
+
 Moves that are closer to the required score (like +5.00 in the screenshot) are shown in full. The others are represented by bars. You can adjust the intensity of the game by selecting the score using the buttons to the right of the indicator (the selected moves will change dynamically). Alternatively, you can simply click on an interesting move, and the intensity will adjust accordingly.
 
-![[0.1.2-3.png]]
+![0 1 2-3](https://github.com/user-attachments/assets/b9a0a59a-753c-4790-bd6f-845291a29b52)
+
 Here we decided to slowly lose by setting the level to "-1.50". It's no surprise that all the moves are red... Except for one green one. It's shown as a green optimistic bar, but by hovering the mouse cursor over it, you can read that in a losing position, we have the opportunity to checkmate in four moves.
 
 It's just that reading moves on strips and translating "h5f7" onto the board is still tiring. If only it were possible to draw the move directly on the board...
@@ -153,7 +167,9 @@ var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{poin
 var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill: rgb(255, 255, 0); opacity: 0.7;' /></svg>";
 ```
 It turned out quite nicely.
-![[0.1.2-6.png]]
+
+![0 1 2-6](https://github.com/user-attachments/assets/faabc83f-8f26-480d-af18-ce33c308f130)
+
 There is one drawback - the arrow doesn't disappear on its own if the opponent makes a move. I'm thinking about how to deal with this. It's not a big deal. What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
 
 # Unexpected pitfall
@@ -161,7 +177,9 @@ There is one drawback - the arrow doesn't disappear on its own if the opponent m
 Initially, I tried to find the FEN of the current position in the page's code. It is indeed possible to obtain it by making a web request... but only when playing against a bot. When playing against a human, this option is unavailable. Most likely, this is intentional to make it difficult for third-party applications to analyze the position.
 
 But on our page, we have a record of all previous moves. It is on both sites, chess.com and lichess.org, but in a different format.
-![[Pasted image 20250303200854.png]]
+
+![Pasted image 20250303200854](https://github.com/user-attachments/assets/9c858811-c864-4f8f-a394-8e82bd5c9930)
+
 That is, theoretically, it is possible to start from the initial position and, by repeating all these moves, arrive at the current position. But in this case, we would know everything we need to construct the actual FEN: whether the kings or rooks have moved, how many half-moves have been made without pawn movement, whether there are *en passant* pawns...
 ```html
 <i5z>8</i5z><kwdb class="">Nf3</kwdb><kwdb class="">Nc6</kwdb>
@@ -175,13 +193,16 @@ It seems simple - set up an 8x8 array with chars as pieces, move the symbols aro
 I found a very good chess library - [Geras1mleo](https://github.com/Geras1mleo/Chess) (60 stars on GitHub plus one from me) and started studying the source code. Initially, I wanted to use it as is, but I was eager to modify some things to suit my needs. Besides, 80% of the code was unnecessary for me (printing, parsing FEN and PGN, converting UCI to SAN, move validity checking). On the other hand, there was no option to manually set up the pieces. And I need both options - setting up a position (if the move history is unavailable, for example, when solving studies) and restoring FEN from the move history.
 
 Let me repeat, the library is excellent, and some nuances of FEN became clear after studying the source code. I used the code partially, even preserving the names of some functions. Nevertheless, it resulted in almost 1000 lines of code and writing unit tests. Adding the calculation of the exact FEN position in the browser took seven evenings of coding and debugging.
-![[0.1.2-4.png]]
+
+![0 1 2-4](https://github.com/user-attachments/assets/f6201788-f9f0-4091-9806-9a28829cf0e8)
+
 By the way, FEN in the status bar can be highlighted with the mouse and copied. For example, for analysis by some program.
 
 "**kq - 2 12**" here means that only black player can perform both their castlings ("kq"), there are no *en passant* captures ("-"), two half-moves have been made without pawn movements, and 12 full moves have passed since the start of the game. Now the Stockfish position analysis is 100% accurate.
 
 The actual interface.
-![[0.1.1-8-p.png]]
+
+![0 1 1-8-p](https://github.com/user-attachments/assets/592371b3-479a-4212-804e-342537be82cb)
 
 # Conclusion
 
