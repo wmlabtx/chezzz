@@ -102,7 +102,9 @@ At this point, I bragged on one of the platforms. One of the commenters mentione
 ```html
 <cg-board>
 <piece class="black rook" style="transform: translate(0px, 0px);"></piece>
-<piece class="black bishop" style="transform: translate(174px, 0px);"></piece><piece class="black queen" style="transform: translate(174px, 87px);"></piece><piece class="black king" style="transform: translate(522px, 0px);"></piece>
+<piece class="black bishop" style="transform: translate(174px, 0px);"></piece>
+<piece class="black queen" style="transform: translate(174px, 87px);"></piece>
+<piece class="black king" style="transform: translate(522px, 0px);"></piece>
 ```
 The logic remains the same in other respects. You can choose between the sites at any time.
 
@@ -170,7 +172,9 @@ It turned out quite nicely.
 
 ![0 1 2-6](https://github.com/user-attachments/assets/faabc83f-8f26-480d-af18-ce33c308f130)
 
-There is one drawback - the arrow doesn't disappear on its own if the opponent makes a move. I'm thinking about how to deal with this. It's not a big deal. What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
+There is one drawback - the arrow doesn't disappear on its own if the opponent makes a move. I'm thinking about how to deal with this. It's not a big deal.
+
+What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
 
 # Unexpected pitfall
 
