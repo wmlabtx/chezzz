@@ -1,4 +1,4 @@
-# How It All Began
+# How it all began
 
 I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem— a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
 
@@ -22,6 +22,7 @@ var result = await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
 var decodedHtml = Regex.Unescape(result.Trim('"'));
 ```
 It remains to figure out how to extract the board and pieces from the HTML page.
+
 # Chess board parsing
 
 In the current implementation, the chess.com board is encoded with a set of divs.
@@ -40,6 +41,7 @@ The class of a piece always starts with "piece", the first character of the two-
 <wc-chess-board class="board flipped">
 ```
 The presence of a `flipped` class suggests that the board is turned over. You can extract the positions of all pieces with a simple regular expression. It turned out to be more difficult to convey them to Stockfish.
+
 # Stockfish interaction
 
 I downloaded the binary version **stockfish-windows-x86-64-avx2.exe** [from here](https://stockfishchess.org/download/). It doesn't require installation and can be placed in any folder. When launched, you see an empty console window. 
@@ -47,6 +49,7 @@ I downloaded the binary version **stockfish-windows-x86-64-avx2.exe** [from here
 Always start the dialogue with the command "**uci**". The engine provides information about itself and ends the output with the marker word "**uciok**". Next, it's advisable to specify the number of threads to improve performance (by default, one thread is used) with the command "**setoption name Threads value XXXX**". After finishing the settings, send the command "**ucinewgame**", which means a new game. Then, you need to specify the position for analysis, "**position fen XXXX**", where XXXX is the encoded position. I will explain the format below. And request to accept it with the command "**isready**". If everything is in order, the engine will respond with "**readyok**". Finally, we need to start the analysis with the command **go** with parameters. I used "**go movetime XXXX**", where XXXX is the number of milliseconds given for thinking.
 ![[Pasted image 20250302185139.png]]
 After this, the engine starts evaluating options (dumping a lot of interesting information into the console, such as the assessment of the current position), and it ends with the message "**bestmove XXXX**" (the best move found). This is what I will display in the status bar. Then the stream and the child process can be closed. What is the heck FEN encoded string?
+
 # `"rnbqkbnr/.../RNBQKBNR w KQkq - 0 1"`???
 
 A FEN position consists of a description of eight ranks, separated by slashes. For example, the third rank looks like this: "2P2N2". "2" means first two empty squares, then a white pawn ("P" in uppercase), then again two empty squares, a white knight ("N" in uppercase), and then again two empty squares. Black pieces are written in lowercase.
@@ -56,6 +59,7 @@ Then comes an information block of six fields. Why are they needed if the positi
 So, we read the pieces from the page, encoded the position in FEN (for now, just the pieces themselves, without additional information), passed it to Stockfish, received "**bestmove XXXX**", and displayed it in the status bar.
 ![[header.png]]
 Is the task solved? No.
+
 # Stockfish plays TOO well
 
 By making only the best moves, I will win against everyone, including the world champion, and will justly receive an account ban. That's not what I need at all. I need an advisor who will protect me from foolish moves and won't suggest playing much stronger or weaker than the opponent. 
@@ -75,12 +79,14 @@ Skill(int skill_level, int uci_elo) {
 To begin with, I discovered the setting "**set option name MultiPV value N**". It instructs Stockfish to return not only the best move but also the top N moves, sorted in descending order. Additionally, for each move, you can return the WDL ("win-draw-loss") statistics "**setoption name UCI_ShowWDL value true**". These are three numbers that add up to one hundred, for example, "30-60-10", which allows you to roughly calculate the probability of winning or losing. Shall we try the top three moves to start?
 ![[header-github-2.png]]
 But, only three possible moves don't make me happy.
+
 # I Want to See All the Moves
 
 Three options of varying strength are better than one. But if we already know the evaluation of each move, let's specify the desired level in the settings, for example, "+3.00" (an advantage of a extra bishop) or "-1.00" (let the opponent have an extra pawn). At the same time, let's color the move in different shades - from red to green. And instead of showing the top three moves, let's show them all!
 ![[0126-2.png]]
 To avoid being annoyed by ridiculous opening moves, I compiled a book of openings from various sources into a single .csv file (a relatively small amount, about 3000 positions). If a move is present in theory, its name can be displayed.
 ![[Pasted image 20250303081904.png]]
+
 # Why only chess.com?
 
 At this point, I bragged on one of the platforms. One of the commenters mentioned that chess.com already has a hint option when playing with a bot. And real pros are on lichess.org. There's no such option there. I had to figure out how the board is coded there.
@@ -91,6 +97,7 @@ At this point, I bragged on one of the platforms. One of the commenters mentione
 ```
 The logic remains the same in other respects. You can choose between the sites at any time.
 ![[0124-8.png]]
+
 # I need an advisor, not a dictator
 
 It seems everything is fine, but it didn't turn out the way I intended. I decided to make the moves myself, but I need a quick answer on whether the move is a blunder and simply losing. Searching for my move in the multicolored stripes is exhausting. Therefore, I decided to group the moves by pieces.
@@ -114,6 +121,7 @@ Moves that are closer to the required score (like +5.00 in the screenshot) are s
 Here we decided to slowly lose by setting the level to "-1.50". It's no surprise that all the moves are red... Except for one green one. It's shown as a green optimistic bar, but by hovering the mouse cursor over it, you can read that in a losing position, we have the opportunity to checkmate in four moves.
 
 It's just that reading moves on strips and translating "h5f7" onto the board is still tiring. If only it were possible to draw the move directly on the board...
+
 # Drawing a move
 
 Initially, I thought it would be easy to place a Canvas in front of the WebBrowser element, get the board's offset relative to the top-left corner using a JS function, and then draw anything on the board, be it lines or text. But it didn't work. WebView2 uses hardware acceleration and DirectComposition to render its content, which creates complexities when integrating with the traditional WPF rendering system. I only managed to overlay the control with another window, without a border and title, and track all the movements of the main window... Quite a nightmare, and it all worked unstably.
@@ -147,6 +155,7 @@ var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle}
 It turned out quite nicely.
 ![[0.1.2-6.png]]
 There is one drawback - the arrow doesn't disappear on its own if the opponent makes a move. I'm thinking about how to deal with this. It's not a big deal. What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
+
 # Unexpected pitfall
 
 Initially, I tried to find the FEN of the current position in the page's code. It is indeed possible to obtain it by making a web request... but only when playing against a bot. When playing against a human, this option is unavailable. Most likely, this is intentional to make it difficult for third-party applications to analyze the position.
@@ -173,6 +182,7 @@ By the way, FEN in the status bar can be highlighted with the mouse and copied. 
 
 The actual interface.
 ![[0.1.1-8-p.png]]
+
 # Conclusion
 
  I made this thing (and I'm sharing it for free) for fun. I remind you that cheating is unfair and dishonest towards your opponent. On the other hand, this advisor allows you to "level" the strength of the game if the opponents are in different weight categories. The games become interesting. If the opponent has a rating of, for example, 1800, setting the strength to "+0.50" will allow you to play at a 1900-2000 rating. Of course, this should only be done with the permission and approval of the opponent. For training purposes, for example.
