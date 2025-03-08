@@ -176,14 +176,14 @@ It turned out quite nicely.
 There is one drawback — the arrow doesn't disappear on its own if the opponent makes a move. A mechanism is needed that automatically removes the arrow if there are changes on the board. For example, a MutationObserver. We add the arrow, enable the MutationObserver. It triggers (for instance, if we or the opponent makes a move) — the arrow is removed. In fact, the arrow disappears already during the move, as picking up a piece with the mouse is a change in the DOM.
 ```js
 window._chessBoardObserver = new MutationObserver(function(mutations){{
-	if(window._disableArrowObserver){{
-		return;
-	}}
-	mutations.forEach(function(mutation){{
-		if(mutation.type === 'childList' || mutation.type === 'attributes'){{
-			removeArrow();
-		}}
-	}});
+  if(window._disableArrowObserver){{
+    return;
+  }}
+  mutations.forEach(function(mutation){{
+    if(mutation.type === 'childList' || mutation.type === 'attributes'){{
+      removeArrow();
+    }}
+  }});
 }});
 ```
 # Unexpected pitfall
