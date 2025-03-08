@@ -22,7 +22,7 @@ The advisor itself is a portable application. It can be downloaded from **Releas
 
 ```xml
 <appSettings>
-	<add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
+  <add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
 </appSettings>
 ```
 
@@ -31,3 +31,15 @@ The advisor itself is a portable application. It can be downloaded from **Releas
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
 * FEN notation: [https://www.chess.com/terms/fen-chess](https://www.chess.com/terms/fen-chess)
+
+# Like the project?
+
+Give it a ⭐ Star!
+
+# Found a bug?
+
+Drop to [Issues](https://github.com/wmlabtx/chezzz/issues).
+
+or wmlab@hotmail.com
+
+Thanks in advance!
