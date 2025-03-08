@@ -1,5 +1,7 @@
 # What is this even about?
 
+![header](https://github.com/user-attachments/assets/0c7edc20-f734-4925-99d5-00de4c8ba48d)
+
 This is a two-month story about the creation of a chess advisor to assist in playing on chess.com and lichess.org. It is a small Windows application that requires [Stockfish](https://stockfishchess.org/download/) to function. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github](https://github.com/wmlabtx/chezzz). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process.
 # How It All Began
 
