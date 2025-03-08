@@ -6,7 +6,7 @@ This is a two-month story about the creation of a chess advisor to assist in pla
 
 # How It All Began
 
-I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem— a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
+I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem — a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
 
 I've long thought about looking into Stockfish, but I assumed it was difficult to integrate. In December, I read an article about it, which mentioned that it supports console input-output perfectly, and I got excited about the idea of making it my assistant.
 
