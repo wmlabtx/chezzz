@@ -14,8 +14,8 @@ public partial class MainWindow
 
     private readonly IProgress<string>? _status;
     private readonly string? _stockfishPath;
-    private bool isWhite;
-    private string ChessBoardTag;
+    private bool _isWhite;
+    private string _chessBoardTag;
 
     private readonly SortedList<int, Move> _moves = new();
     private readonly SortedSet<int> _selectedMoves = new();
@@ -30,7 +30,7 @@ public partial class MainWindow
     {
         InitializeComponent();
 
-        ChessBoardTag = "wc-chess-board";
+        _chessBoardTag = "wc-chess-board";
 
         _requiredTime = new IntSetting(
             nameof(Settings.Default.RequiredTime), 
@@ -65,10 +65,10 @@ public partial class MainWindow
                     WebBrowser.Source = new Uri(url);
                 }
 
-                ChessBoardTag = selectedPlatform switch {
+                _chessBoardTag = selectedPlatform switch {
                     AppConsts.CHESS => "wc-chess-board",
                     AppConsts.LICHESS => "cg-container",
-                    _ => ChessBoardTag
+                    _ => _chessBoardTag
                 };
             }
         }

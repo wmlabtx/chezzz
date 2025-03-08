@@ -54,7 +54,7 @@ public partial class MainWindow
         var error = string.Empty;
         var fen = string.Empty;
         var board = new San.Board();
-        isWhite = true;
+        _isWhite = true;
         switch (Platform.SelectionBoxItem) {
             case AppConsts.CHESS:
                 GetFenFromChess(decodedHtml, out error, out board, out fen);
@@ -190,16 +190,16 @@ public partial class MainWindow
 
                 if (parts[i].Equals("pv")) {
                     move.FirstMove = parts[i + 1];
-                    move.FirstPiece = GetPiece(move.FirstMove, isWhite, board);
+                    move.FirstPiece = GetPiece(move.FirstMove, _isWhite, board);
                     if (i + 2 < parts.Length) {
                         move.SecondMove = parts[i + 2];
-                        move.SecondPiece = GetPiece(move.SecondMove, !isWhite, board);
+                        move.SecondPiece = GetPiece(move.SecondMove, !_isWhite, board);
                     }
                 }
             }
 
             if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
-                SetSelectedIndex(isWhite ? 1 : -1);
+                SetSelectedIndex(_isWhite ? 1 : -1);
                 ShowMoves();
                 await AddArrow();
                 _moves.Clear();
@@ -245,7 +245,7 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
-        SetSelectedIndex(isWhite ? 1 : -1);
+        SetSelectedIndex(_isWhite ? 1 : -1);
         ShowMoves();
         await AddArrow();
 
@@ -358,7 +358,7 @@ public partial class MainWindow
     {
         _requiredScore.ChangeValue(delta);
         UpdateRequiredScore();
-        SetSelectedIndex(isWhite ? 1 : -1);
+        SetSelectedIndex(_isWhite ? 1 : -1);
         ShowMoves();
         await AddArrow();
     }

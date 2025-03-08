@@ -1,8 +1,11 @@
+# What is this even about?
+
+This is a two-month story about the creation of a chess advisor to assist in playing on chess.com and lichess.org. It is a small Windows application that requires [Stockfish]([Download Stockfish 17 - Stockfish - Strong open-source chess engine](https://stockfishchess.org/download/)) to function. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github]([wmlabtx/chezzz: WPF application for playing on chess.com and lichess.org with an advisor using the free Stockfish engine](https://github.com/wmlabtx/chezzz)). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process.
 # How It All Began
 
 I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem— a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
 
-I've long thought about looking into StockFish, but I assumed it was difficult to integrate. In December, I read an article about it, which mentioned that it supports console input-output perfectly, and I got excited about the idea of making it my assistant.
+I've long thought about looking into Stockfish, but I assumed it was difficult to integrate. In December, I read an article about it, which mentioned that it supports console input-output perfectly, and I got excited about the idea of making it my assistant.
 
 On Christmas Eve, we weren't working, and I started considering how to integrate it with chess.com. Stockfish can be launched as a child process, you can pass an encoded position and settings (including how much time it has to think) to the console, and... read the response. But how to get the position?
 
@@ -51,7 +54,7 @@ After this, the engine starts evaluating options (dumping a lot of interesting i
 
 A FEN position consists of a description of eight ranks, separated by slashes. For example, the third rank looks like this: "2P2N2". "2" means first two empty squares, then a white pawn ("P" in uppercase), then again two empty squares, a white knight ("N" in uppercase), and then again two empty squares. Black pieces are written in lowercase.
 
-Then comes an information block of six fields. Why are they needed if the position is clear? In fact, it's not. In a position taken from the middle of a game, additional information is missing. The first field "**w**" indicates it's white's turn, or "**b**" for black's turn. Then we must list possible castling (there are four - "**KQkq**", two for each side) or "**-**" if castling is unavailable. For example, a king may move before castling and later return to its square. The position will look "innocent," but the possibility of castling is already lost since the king has moved. Next, we must indicate if there are *en passant* captures, which is not always clear from the position. The penultimate field is the half move clock. This is needed to determine a draw if there have been no pawn movements or captures for a long time. The last field indicates the number of full moves (i.e., a move for both black and white). To be honest, it's unclear where to get them from. A simple board with pieces doesn't provide such information. In the first version, I always state "**- - 0 1**". This is generally inaccurate, castling will never be offered, but it's reliable and suitable for the first version. Later, I corrected this (opening the gates of hell). For details on FEN, I refer to the [FEN description](https://www.chess.com/terms/fen-chess). 
+Then comes an information block of six fields. Why are they needed if the position is clear? In fact, it's not. In a position taken from the middle of a game, additional information is missing. The first field "**w**" indicates it's white's turn, or "**b**" for black's turn. Then we must list possible castling (there are four — "**KQkq**", two for each side) or "**-**" if castling is unavailable. For example, a king may move before castling and later return to its square. The position will look "innocent," but the possibility of castling is already lost since the king has moved. Next, we must indicate if there are *en passant* captures, which is not always clear from the position. The penultimate field is the half move clock. This is needed to determine a draw if there have been no pawn movements or captures for a long time. The last field indicates the number of full moves (i.e., a move for both black and white). To be honest, it's unclear where to get them from. A simple board with pieces doesn't provide such information. In the first version, I always state "**- - 0 1**". This is generally inaccurate, castling will never be offered, but it's reliable and suitable for the first version. Later, I corrected this (opening the gates of hell). For details on FEN, I refer to the [FEN description](https://www.chess.com/terms/fen-chess). 
 
 So, we read the pieces from the page, encoded the position in FEN (for now, just the pieces themselves, without additional information), passed it to Stockfish, received "**bestmove XXXX**", and displayed it in the status bar.
 ![[header.png]]
@@ -146,10 +149,24 @@ var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle}
 ```
 It turned out quite nicely.
 ![[0.1.2-6.png]]
-There is one drawback - the arrow doesn't disappear on its own if the opponent makes a move. I'm thinking about how to deal with this. It's not a big deal. What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
+There is one drawback — the arrow doesn't disappear on its own if the opponent makes a move. A mechanism is needed that automatically removes the arrow if there are changes on the board. For example, a MutationObserver. We add the arrow, enable the MutationObserver. It triggers (for instance, if we or the opponent makes a move) — the arrow is removed. In fact, the arrow disappears already during the move, as picking up a piece with the mouse is a change in the DOM.
+```js
+window._chessBoardObserver = new MutationObserver(function(mutations){{
+	if(window._disableArrowObserver){{
+		return;
+	}}
+	mutations.forEach(function(mutation){{
+		if(mutation.type === 'childList' || mutation.type === 'attributes'){{
+			removeArrow();
+		}}
+	}});
+}});
+```
 # Unexpected pitfall
 
-Initially, I tried to find the FEN of the current position in the page's code. It is indeed possible to obtain it by making a web request... but only when playing against a bot. When playing against a human, this option is unavailable. Most likely, this is intentional to make it difficult for third-party applications to analyze the position.
+ What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
+
+Initially, I tried to find the FEN of the current position in the chess.com page's code. It is indeed possible to obtain it by making a web request... but only when playing against a bot. When playing against a human, this option is unavailable. Most likely, this is intentional to make it difficult for third-party applications to analyze the position.
 
 But on our page, we have a record of all previous moves. It is on both sites, chess.com and lichess.org, but in a different format.
 ![[Pasted image 20250303200854.png]]

@@ -44,12 +44,12 @@ public partial class MainWindow
 
         error = string.Empty;
         fen = string.Empty;
-        isWhite = true;
+        _isWhite = true;
         var match = ChessBoardRegex().Match(decodedHtml);
         if (match.Success) {
             var classValue = match.Groups[1].Value;
             if (classValue.Contains("flipped")) {
-                isWhite = false;
+                _isWhite = false;
             }
         }
         else {
@@ -101,7 +101,7 @@ public partial class MainWindow
             board.PutPiece(row, col, new San.Piece(color, piece));
         }
 
-        fen = board.ToFen(isWhite);
+        fen = board.ToFen(_isWhite);
 
         var sanmoves = new List<string>();
         var simpleMoveListMatch = SimpleMoveListRegex().Match(decodedHtml);
@@ -136,7 +136,7 @@ public partial class MainWindow
         // <div class="cg-wrap orientation-white manipulable"><cg-container style="width: 736px; height: 736px;">
         // <div class="cg-wrap orientation-black manipulable"><cg-container style="width: 736px; height: 736px;">
 
-        isWhite = true;
+        _isWhite = true;
         var regex = OrientationRegex();
         var m = regex.Match(decodedHtml);
         if (!m.Success) {
@@ -146,7 +146,7 @@ public partial class MainWindow
 
         var orientation = m.Groups["orientation"].Value;
         if (orientation.Equals("black")) {
-            isWhite = false;
+            _isWhite = false;
         }
         else {
             if (!orientation.Equals("white")) {
@@ -197,7 +197,7 @@ public partial class MainWindow
 
             var col = (int)Math.Round(int.Parse(rawX) / squareX);
             var row = (int)Math.Round(int.Parse(rawY) / squareY);
-            if (!isWhite) {
+            if (!_isWhite) {
                 col = 7 - col;
                 row = 7 - row;
             }
@@ -205,7 +205,7 @@ public partial class MainWindow
             board.PutPiece(row, col, new San.Piece(color, piece));
         }
 
-        fen = board.ToFen(isWhite);
+        fen = board.ToFen(_isWhite);
 
         var sanmoves = new List<string>();
         const string pattern = @"<kwdb[^>]*>(.*?)<\/kwdb>";

@@ -227,7 +227,7 @@ public partial class MainWindow
     private async Task RemoveArrow()
     {
         var script = $@"
-            var chessBoard = document.querySelector('{ChessBoardTag}');
+            var chessBoard = document.querySelector('{_chessBoardTag}');
             if (chessBoard) {{
                 var existingSvg = document.getElementById('chezzz-arrow');
                 if (existingSvg) {{
@@ -251,7 +251,7 @@ public partial class MainWindow
         var x2 = (dst[0] - 'a') * 12.5 + 6.25;
         var y1 = ('8' - src[1]) * 12.5 + 6.25;
         var y2 = ('8' - dst[1]) * 12.5 + 6.25;
-        if (!isWhite) {
+        if (!_isWhite) {
             x1 = 100.0 - x1;
             x2 = 100.0 - x2;
             y1 = 100.0 - y1;
@@ -272,18 +272,48 @@ public partial class MainWindow
         var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
         var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill: rgb(255, 255, 0); opacity: 0.7;' /></svg>";
         var script = $@"
-            var existingSvg = document.getElementById('chezzz-arrow');
-            if (existingSvg) {{
-                existingSvg.parentNode.removeChild(existingSvg);
+(function(){{
+    if(window._chessBoardObserver){{
+        window._chessBoardObserver.disconnect();
+        window._chessBoardObserver = null;
+    }}
+    window._disableArrowObserver = true;
+    function removeArrow(){{
+        var existingArrow = document.getElementById('chezzz-arrow');
+        if(existingArrow){{
+            existingArrow.parentNode.removeChild(existingArrow);
+        }}
+    }}
+    removeArrow();
+    var chessBoard = document.querySelector('{_chessBoardTag}');
+    if(chessBoard){{
+        var div = document.createElement('div');
+        div.setAttribute('id', 'chezzz-arrow');
+        div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9');
+        div.innerHTML = `{svgElement}`;
+        chessBoard.appendChild(div);
+    }}
+    setTimeout(function(){{
+        window._disableArrowObserver = false;
+        window._chessBoardObserver = new MutationObserver(function(mutations){{
+            if(window._disableArrowObserver){{
+                return;
             }}
-            var chessBoard = document.querySelector('{ChessBoardTag}');
-            if (chessBoard) {{
-                var div = document.createElement('div');
-                div.setAttribute('id', 'chezzz-arrow');
-                div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9');
-                div.innerHTML = `{svgElement}`;
-                chessBoard.appendChild(div);
-            }}";
+            mutations.forEach(function(mutation){{
+                if(mutation.type === 'childList' || mutation.type === 'attributes'){{
+                    removeArrow();
+                }}
+            }});
+        }});
+        if(chessBoard){{
+            window._chessBoardObserver.observe(chessBoard, {{
+                childList: true,
+                attributes: true,
+                subtree: true
+            }});
+        }}
+    }}, 0);
+}})();";
         await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
     }
 }
