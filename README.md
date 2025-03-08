@@ -16,7 +16,7 @@ The advisor supports both popular chess websites. You can switch between them at
 
 You can play either anonymously or in your account. All modes are supported — playing against people, bots, solving puzzles, and studies.
 
-### Configuring
+# Configuring
 
 The advisor itself is a portable application. It can be downloaded from **Releases** and unpacked into any folder. However, it requires Stockfish to work. Stockfish is free; download it from [here](https://stockfishchess.org/download/), place it in any folder (you can put it directly in the advisor's folder), and specify the full path to it in the **App.config** file
 
