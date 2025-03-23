@@ -1,9 +1,12 @@
 # What is this even about?
 
-This is a two-month story about the creation of a chess advisor to assist in playing on chess.com and lichess.org. It is a small Windows application that requires [Stockfish]([Download Stockfish 17 - Stockfish - Strong open-source chess engine](https://stockfishchess.org/download/)) to function. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github]([wmlabtx/chezzz: WPF application for playing on chess.com and lichess.org with an advisor using the free Stockfish engine](https://github.com/wmlabtx/chezzz)). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process.
+![header](https://github.com/user-attachments/assets/0c7edc20-f734-4925-99d5-00de4c8ba48d)
+
+This is a two-month story about the creation of a chess advisor to assist in playing on chess.com and lichess.org. It is a small Windows application written on csharp and wpf that requires [Stockfish](https://stockfishchess.org/download/) to function. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github](https://github.com/wmlabtx/chezzz). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process. You could consider this program a cheat, and that's partly true. But I would like to focus on its technical details.
+
 # How It All Began
 
-I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem— a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
+I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem — a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
 
 I've long thought about looking into Stockfish, but I assumed it was difficult to integrate. In December, I read an article about it, which mentioned that it supports console input-output perfectly, and I got excited about the idea of making it my assistant.
 
@@ -113,7 +116,7 @@ The logic remains the same in other respects. You can choose between the sites a
 
 ![0124-8](https://github.com/user-attachments/assets/024e3348-d70d-4fe1-8054-6aa6f51d4f1b)
 
-# I need an advisor, not a dictator
+# I need an advisor, not a chess bot
 
 It seems everything is fine, but it didn't turn out the way I intended. I decided to make the moves myself, but I need a quick answer on whether the move is a blunder and simply losing. Searching for my move in the multicolored stripes is exhausting. Therefore, I decided to group the moves by pieces.
 ```C#
@@ -172,18 +175,20 @@ var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{poin
 var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill: rgb(255, 255, 0); opacity: 0.7;' /></svg>";
 ```
 It turned out quite nicely.
-![[0.1.2-6.png]]
+
+![0 1 2-6](https://github.com/user-attachments/assets/b846899f-9784-4875-93cc-c9c580900d12)
+
 There is one drawback — the arrow doesn't disappear on its own if the opponent makes a move. A mechanism is needed that automatically removes the arrow if there are changes on the board. For example, a MutationObserver. We add the arrow, enable the MutationObserver. It triggers (for instance, if we or the opponent makes a move) — the arrow is removed. In fact, the arrow disappears already during the move, as picking up a piece with the mouse is a change in the DOM.
 ```js
 window._chessBoardObserver = new MutationObserver(function(mutations){{
-	if(window._disableArrowObserver){{
-		return;
-	}}
-	mutations.forEach(function(mutation){{
-		if(mutation.type === 'childList' || mutation.type === 'attributes'){{
-			removeArrow();
-		}}
-	}});
+  if(window._disableArrowObserver){{
+    return;
+  }}
+  mutations.forEach(function(mutation){{
+    if(mutation.type === 'childList' || mutation.type === 'attributes'){{
+      removeArrow();
+    }}
+  }});
 }});
 ```
 # Unexpected pitfall

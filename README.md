@@ -16,13 +16,13 @@ The advisor supports both popular chess websites. You can switch between them at
 
 You can play either anonymously or in your account. All modes are supported — playing against people, bots, solving puzzles, and studies.
 
-### Configuring
+# Configuring
 
 The advisor itself is a portable application. It can be downloaded from **Releases** and unpacked into any folder. However, it requires Stockfish to work. Stockfish is free; download it from [here](https://stockfishchess.org/download/), place it in any folder (you can put it directly in the advisor's folder), and specify the full path to it in the **App.config** file
 
 ```xml
 <appSettings>
-	<add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
+  <add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
 </appSettings>
 ```
 
@@ -31,3 +31,15 @@ The advisor itself is a portable application. It can be downloaded from **Releas
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
 * FEN notation: [https://www.chess.com/terms/fen-chess](https://www.chess.com/terms/fen-chess)
+
+# Like the project?
+
+Give it a ⭐ Star!
+
+# Found a bug?
+
+Drop to [Issues](https://github.com/wmlabtx/chezzz/issues).
+
+or wmlab@hotmail.com
+
+Thanks in advance!
