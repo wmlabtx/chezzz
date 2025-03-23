@@ -12,7 +12,7 @@ public partial class MainWindow
     private const int POSITIVE_MATE = 10000;
     private const int NEGATIVE_MATE = -10000;
 
-    private readonly IProgress<string>? _status;
+    private readonly IProgress<string> _status;
     private readonly string? _stockfishPath;
     private bool _isWhite;
     private string _chessBoardTag;
@@ -20,11 +20,16 @@ public partial class MainWindow
     private readonly SortedList<int, Move> _moves = new();
     private readonly SortedSet<int> _selectedMoves = new();
     private int _selectedIndex;
+    private string _opponentArrow;
 
     private readonly IntSetting _requiredTime;
     private readonly IntSetting _requiredScore;
 
     private readonly SortedDictionary<string, string> _openings = new();
+
+    private const string ARROW_PREFIX = "chezzz";
+    private const string ARROW_PLAYER = $"{ARROW_PREFIX}-player";
+    private const string ARROW_OPPONENT = $"{ARROW_PREFIX}-opponent";
 
     public MainWindow()
     {
@@ -50,9 +55,14 @@ public partial class MainWindow
 
         _status = new Progress<string>(message => Status.Text = message);
         _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
-        if (!File.Exists(_stockfishPath)) {
-            _status?.Report($"{_stockfishPath} not found");
+        if (_stockfishPath is null) {
+            _status.Report("StockFishPath not found");
         }
+        else if (!File.Exists(_stockfishPath)) {
+            _status.Report($"{_stockfishPath} not found");
+        }
+
+        _opponentArrow = string.Empty;
     }
 
     private void GotoPlatform()

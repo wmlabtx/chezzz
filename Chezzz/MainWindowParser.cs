@@ -25,25 +25,40 @@ public partial class MainWindow
     [GeneratedRegex(@"<wc-simple-move-list(?<block>[\s\S]*?)</wc-simple-move-list>", RegexOptions.IgnoreCase)]
     private static partial Regex SimpleMoveListRegex();
 
-    private static bool ProcessSanMoves(IEnumerable<string> sanmoves, out string fen)
+    private static bool ProcessSanMoves(IReadOnlyList<string> sanmoves, out string previousFen, out string previousMove, out string currentFen)
     {
-        fen = string.Empty;
+        previousFen = string.Empty;
+        previousMove = string.Empty;
+        currentFen = string.Empty;
         var sanBoard = new San.Board();
         sanBoard.StartGame();
-        if (sanmoves.Any(move => !sanBoard.Move(move))) {
-            return false;
+
+        for (var i = 0; i < sanmoves.Count; i++) {
+            if (!sanBoard.Move(sanmoves[i])) {
+                return false;
+            }
+
+            if (i == sanmoves.Count - 2) {
+                previousFen = sanBoard.ToFen();
+            }
+
+            if (i == sanmoves.Count - 1) {
+                currentFen = sanBoard.ToFen();
+                previousMove = sanBoard.GetLastMove();
+            }
         }
 
-        fen = sanBoard.ToFen();
         return true;
     }
 
-    private void GetFenFromChess(string decodedHtml, out string error, out San.Board board, out string fen)
+    private void GetFenFromChess(string decodedHtml, out string error, out San.Board board, out string previousFen, out string previousMove, out string currentFen)
     {
         board = new San.Board();
 
         error = string.Empty;
-        fen = string.Empty;
+        previousFen = string.Empty;
+        previousMove = string.Empty;
+        currentFen = string.Empty;
         _isWhite = true;
         var match = ChessBoardRegex().Match(decodedHtml);
         if (match.Success) {
@@ -101,7 +116,7 @@ public partial class MainWindow
             board.PutPiece(row, col, new San.Piece(color, piece));
         }
 
-        fen = board.ToFen(_isWhite);
+        currentFen = board.ToFen(_isWhite);
 
         var sanmoves = new List<string>();
         var simpleMoveListMatch = SimpleMoveListRegex().Match(decodedHtml);
@@ -120,18 +135,20 @@ public partial class MainWindow
         }
 
         if (sanmoves.Count > 0) {
-            if (ProcessSanMoves(sanmoves, out var sanfen)) {
-                fen = sanfen;
+            if (!ProcessSanMoves(sanmoves, out previousFen, out previousMove, out currentFen)) {
+                error = "Error processing moves";
             }
         }
     }
 
-    private void GetFenFromLiChess(string decodedHtml, out string error, out San.Board board, out string fen)
+    private void GetFenFromLiChess(string decodedHtml, out string error, out San.Board board, out string previousFen, out string previousMove, out string currentFen)
     {
         board = new San.Board();
 
         error = string.Empty;
-        fen = string.Empty;
+        previousFen = string.Empty;
+        previousMove = string.Empty;
+        currentFen = string.Empty;
 
         // <div class="cg-wrap orientation-white manipulable"><cg-container style="width: 736px; height: 736px;">
         // <div class="cg-wrap orientation-black manipulable"><cg-container style="width: 736px; height: 736px;">
@@ -205,7 +222,7 @@ public partial class MainWindow
             board.PutPiece(row, col, new San.Piece(color, piece));
         }
 
-        fen = board.ToFen(_isWhite);
+        currentFen = board.ToFen(_isWhite);
 
         var sanmoves = new List<string>();
         const string pattern = @"<kwdb[^>]*>(.*?)<\/kwdb>";
@@ -218,8 +235,8 @@ public partial class MainWindow
         }
 
         if (sanmoves.Count > 0) {
-            if (ProcessSanMoves(sanmoves, out var sanfen)) {
-                fen = sanfen;
+            if (!ProcessSanMoves(sanmoves, out previousFen, out previousMove, out currentFen)) {
+                error = "Error processing moves";
             }
         }
     }

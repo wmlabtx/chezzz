@@ -33,7 +33,7 @@ public partial class MainWindow
     private async void GoAdvice()
     {
         if (!File.Exists(_stockfishPath)) {
-            _status?.Report($"{_stockfishPath} not found");
+            _status.Report($"{_stockfishPath} not found");
         }
 
         if (!Advice.IsEnabled) {
@@ -45,68 +45,8 @@ public partial class MainWindow
         Advice.IsEnabled = true;
     }
 
-    private async Task AdviceAsync()
+    private async Task AnalyzeTask(TextWriter inputWriter, TextReader outputReader, San.Board board, string fen, string previousMove, string arrowId, int movetime)
     {
-        const string script = "document.documentElement.outerHTML";
-        var result = await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
-        var decodedHtml = Regex.Unescape(result.Trim('"'));
-
-        var error = string.Empty;
-        var fen = string.Empty;
-        var board = new San.Board();
-        _isWhite = true;
-        switch (Platform.SelectionBoxItem) {
-            case AppConsts.CHESS:
-                GetFenFromChess(decodedHtml, out error, out board, out fen);
-                break;
-            case AppConsts.LICHESS:
-                GetFenFromLiChess(decodedHtml, out error, out board, out fen);
-                break;
-        }
-
-        if (!string.IsNullOrEmpty(error)) {
-            _status?.Report(error);
-            return;
-        }
-
-        Fen.Text = fen;
-
-        var stockfish = new Process {
-            StartInfo = new ProcessStartInfo {
-                FileName = _stockfishPath,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            }
-        };
-
-        stockfish.Start();
-
-        var inputWriter = stockfish.StandardInput;
-        var outputReader = stockfish.StandardOutput;
-
-        await inputWriter.WriteLineAsync("uci");
-        await inputWriter.FlushAsync();
-
-        string? line;
-        while ((line = await outputReader.ReadLineAsync()) != null) {
-            if (line.StartsWith("uciok"))
-                break;
-        }
-
-        await inputWriter.WriteLineAsync("setoption name UCI_LimitStrength value false");
-        await inputWriter.FlushAsync();
-
-        await inputWriter.WriteLineAsync("setoption name Threads value 16");
-        await inputWriter.FlushAsync();
-
-        await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
-        await inputWriter.FlushAsync();
-
-        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
-        await inputWriter.FlushAsync();
-
         await inputWriter.WriteLineAsync("ucinewgame");
         await inputWriter.FlushAsync();
 
@@ -116,20 +56,19 @@ public partial class MainWindow
         await inputWriter.WriteLineAsync("isready");
         await inputWriter.FlushAsync();
 
+        string? line;
         while ((line = await outputReader.ReadLineAsync()) != null) {
             if (line.StartsWith("readyok"))
                 break;
         }
 
-        var requiredTime = _requiredTime.GetValue();
-        await inputWriter.WriteLineAsync($"go movetime {requiredTime}");
+        await inputWriter.WriteLineAsync($"go movetime {movetime}");
         await inputWriter.FlushAsync();
 
         _selectedIndex = -1;
         _moves.Clear();
-        await RemoveArrow();
         while ((line = await outputReader.ReadLineAsync()) != null) {
-            
+
             if (line.StartsWith("bestmove")) {
                 break;
             }
@@ -154,7 +93,7 @@ public partial class MainWindow
                         move.Score += mateScore;
                     }
                     else {
-                        move.Score -= mateScore; 
+                        move.Score -= mateScore;
                     }
 
                     move.ScoreText = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
@@ -199,9 +138,12 @@ public partial class MainWindow
             }
 
             if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
-                SetSelectedIndex(_isWhite ? 1 : -1);
-                ShowMoves();
-                await AddArrow();
+                if (arrowId.Equals(ARROW_PLAYER)) {
+                    SetSelectedIndex(_isWhite ? 1 : -1);
+                    ShowMoves();
+                    await AddArrowPlayer();
+                }
+
                 _moves.Clear();
             }
 
@@ -236,6 +178,90 @@ public partial class MainWindow
                 }
             }
         }
+    }
+
+    private async Task AdviceAsync()
+    {
+        const string script = "document.documentElement.outerHTML";
+        var result = await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
+        var decodedHtml = Regex.Unescape(result.Trim('"'));
+
+        var requiredTime = _requiredTime.GetValue();
+        var error = string.Empty;
+        var currentFen = string.Empty;
+        var previousFen = string.Empty;
+        var previousMove = string.Empty;
+        var board = new San.Board();
+        _isWhite = true;
+        switch (Platform.SelectionBoxItem) {
+            case AppConsts.CHESS:
+                GetFenFromChess(decodedHtml, out error, out board, out previousFen, out previousMove, out currentFen);
+                break;
+            case AppConsts.LICHESS:
+                GetFenFromLiChess(decodedHtml, out error, out board, out previousFen, out previousMove, out currentFen);
+                break;
+        }
+
+        if (!string.IsNullOrEmpty(error)) {
+            _status.Report(error);
+            return;
+        }
+
+        Fen.Text = currentFen;
+
+        var stockfish = new Process {
+            StartInfo = new ProcessStartInfo {
+                FileName = _stockfishPath,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+
+        stockfish.Start();
+
+        var inputWriter = stockfish.StandardInput;
+        var outputReader = stockfish.StandardOutput;
+
+        await inputWriter.WriteLineAsync("uci");
+        await inputWriter.FlushAsync();
+
+        while (await outputReader.ReadLineAsync() is { } line) {
+            if (line.StartsWith("uciok"))
+                break;
+        }
+
+        await inputWriter.WriteLineAsync("setoption name UCI_LimitStrength value false");
+        await inputWriter.FlushAsync();
+
+        await inputWriter.WriteLineAsync("setoption name Threads value 16");
+        await inputWriter.FlushAsync();
+
+        await inputWriter.WriteLineAsync("setoption name UCI_ShowWDL value true");
+        await inputWriter.FlushAsync();
+
+        await inputWriter.WriteLineAsync("setoption name MultiPV value 256");
+        await inputWriter.FlushAsync();
+
+        _opponentArrow = string.Empty;
+        if (!string.IsNullOrEmpty(previousFen) && !string.IsNullOrEmpty(previousMove)) {
+            await AnalyzeTask(inputWriter, outputReader, board, previousFen, previousMove, ARROW_OPPONENT, 1000);
+            SetSelectedIndex(previousMove);
+            ShowMoves();
+
+            _opponentArrow = GetArrowOpponent(_selectedIndex);
+            if (_selectedIndex != 0) {
+                _opponentArrow += GetArrowOpponent(0);
+            }
+
+            await DrawArrowOpponent();
+        }
+        
+        await AnalyzeTask(inputWriter, outputReader, board, currentFen, string.Empty, ARROW_PLAYER, requiredTime);
+        SetSelectedIndex(_isWhite ? 1 : -1);
+        ShowMoves();
+        await AddArrowPlayer();
 
         await inputWriter.WriteLineAsync("quit");
         await inputWriter.FlushAsync();
@@ -245,11 +271,7 @@ public partial class MainWindow
         inputWriter.Close();
         stockfish.Close();
 
-        SetSelectedIndex(_isWhite ? 1 : -1);
-        ShowMoves();
-        await AddArrow();
-
-        _status?.Report($"Done. Recommended move: {_moves[_selectedIndex].FirstPiece}{_moves[_selectedIndex].FirstMove}; score: {_moves[_selectedIndex].ScoreText} (depth: {_moves[_selectedIndex].Depth})");
+        _status.Report($"Done. Recommended move: {_moves[_selectedIndex].FirstPiece}{_moves[_selectedIndex].FirstMove}; score: {_moves[_selectedIndex].ScoreText} (depth: {_moves[_selectedIndex].Depth})");
     }
 
     private void SetSelectedIndex(int diff)
@@ -261,7 +283,7 @@ public partial class MainWindow
                 return;
             case 1:
                 _selectedMoves.Add(0);
-                _selectedIndex = 0;
+                _selectedIndex = _moves.First().Key;
                 return;
         }
 
@@ -348,6 +370,27 @@ public partial class MainWindow
         }
     }
 
+    private void SetSelectedIndex(string move)
+    {
+        switch (_moves.Count) {
+            case 0:
+                _selectedIndex = -1;
+                return;
+            case 1:
+                _selectedMoves.Add(0);
+                _selectedIndex = _moves.First().Key;
+                return;
+        }
+
+        _selectedIndex = -1;
+        foreach (var m in _moves) {
+            if (m.Value.FirstMove.Equals(move)) {
+                _selectedIndex = m.Key;
+                break;
+            }
+        }
+    }
+
     private void ChangeRequiredTime(int delta)
     {
         _requiredTime.ChangeValue(delta);
@@ -360,7 +403,7 @@ public partial class MainWindow
         UpdateRequiredScore();
         SetSelectedIndex(_isWhite ? 1 : -1);
         ShowMoves();
-        await AddArrow();
+        await AddArrowPlayer();
     }
 
     private static List<string> ParseCsvLine(string line)
@@ -411,7 +454,7 @@ public partial class MainWindow
             return;
         }
 
-        _status?.Report("Reading named book moves...");
+        _status.Report("Reading named book moves...");
 
         var zipBytes = await File.ReadAllBytesAsync(bookPath);
         using var zipStream = new MemoryStream(zipBytes);
@@ -432,6 +475,6 @@ public partial class MainWindow
             }
         }
 
-        _status?.Report("Done");
+        _status.Report("Done");
     }
 }

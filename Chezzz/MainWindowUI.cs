@@ -215,7 +215,7 @@ public partial class MainWindow
                     _requiredScore.SetValue(moveSender.Score);
                     UpdateRequiredScore();
                     ShowMoves();
-                    await AddArrow();
+                    await AddArrowPlayer();
                 };
 
                 ToolTipService.SetInitialShowDelay(moveButton, 0);
@@ -224,21 +224,80 @@ public partial class MainWindow
         }
     }
 
-    private async Task RemoveArrow()
+    private string GetArrowOpponent(int index)
     {
-        var script = $@"
-            var chessBoard = document.querySelector('{_chessBoardTag}');
-            if (chessBoard) {{
-                var existingSvg = document.getElementById('chezzz-arrow');
-                if (existingSvg) {{
-                    existingSvg.parentNode.removeChild(existingSvg);
-                }}
-            }}";
+        var move = _moves[index];
+        var diff = move.Score - _moves[0].Score;
+        Color color;
+        double normalizedValue;
+        if (diff >= -50) {
+            normalizedValue = (double)diff / -50;
+            color = InterpolateColor(Colors.Green, Colors.Gray, normalizedValue);
+        }
+        else if (diff >= -100) {
+            normalizedValue = (double)(diff + 50) / 50;
+            color = InterpolateColor(Colors.Gray, Colors.Red, normalizedValue);
+        }
+        else {
+            color = Colors.Red;
+        }
+        var darkColor = DarkenColor(color, 0.5);
+        var scoreText = diff == 0 ? "BEST" : $"{diff / 100.0:F2}";
 
-        await WebBrowser.ExecuteScriptAsync(script);
+        var src = move.FirstMove[..2];
+        var dst = move.FirstMove[2..];
+        var x1 = (src[0] - 'a') * 12.5 + 6.25;
+        var x2 = (dst[0] - 'a') * 12.5 + 6.25;
+        var y1 = ('8' - src[1]) * 12.5 + 6.25;
+        var y2 = ('8' - dst[1]) * 12.5 + 6.25;
+        if (!_isWhite) {
+            x1 = 100.0 - x1;
+            x2 = 100.0 - x2;
+            y1 = 100.0 - y1;
+            y2 = 100.0 - y2;
+        }
+
+        var dx = x2 - x1;
+        var dy = y1 - y2;
+        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2);
+        var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
+        const double headRadius = 1.5;
+        var point1X = Math.Round(x1 + headRadius, 2);
+        var point2Y = Math.Round(y1 - length + headRadius * 2, 2);
+        var point3X = Math.Round(x1 + headRadius * 2, 2);
+        var point4Y = Math.Round(y1 - length, 2);
+        var point5X = Math.Round(x1 - headRadius * 2, 2);
+        var point6X = Math.Round(x1 - headRadius, 2);
+        var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
+        var pointCX = Math.Round((x1 + x2) / 2, 2);
+        var pointCY = Math.Round((y1 + y2) / 2, 2);
+        var arrow = $@"
+<polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill:rgb({color.R}, {color.G}, {color.B});' />
+<circle cx='{pointCX}' cy='{pointCY}' r='4' style='fill: rgb({darkColor.R}, {darkColor.G}, {darkColor.B}); stroke: rgb({color.R}, {color.G}, {color.B}); stroke-width: 1;'/>
+<text x='{pointCX}' y='{pointCY}' text-anchor='middle' alignment-baseline='middle' style='font-size: 2.5; fill: rgb({color.R}, {color.G}, {color.B}); font-family: Impact;'>{scoreText}</text>";
+        return arrow;
     }
 
-    private async Task AddArrow()
+    private async Task DrawArrowOpponent()
+    {
+        var script = $@"
+(function(){{
+    var chessBoard = document.querySelector('{_chessBoardTag}');
+    if(chessBoard){{
+        var div = document.getElementById('{ARROW_PREFIX}');
+        if(!div){{
+            var div = document.createElement('div');
+            div.setAttribute('id', '{ARROW_PREFIX}');
+            div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9; opacity:0.5;');
+            chessBoard.appendChild(div);
+        }}
+        div.innerHTML = `<svg viewBox='0 0 100 100'>{_opponentArrow}</svg>`;
+    }}
+}})();";
+        await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
+    }
+
+    private async Task AddArrowPlayer()
     {
         if (_selectedIndex < 0 || _selectedIndex >= _moves.Count) {
             return;
@@ -263,14 +322,14 @@ public partial class MainWindow
         var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2);
         var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
         const double headRadius = 1.5;
-        var point1X = x1 + headRadius;
-        var point2Y = y1 - length + headRadius * 2;
-        var point3X = x1 + headRadius * 2;
-        var point4Y = y1 - length;
-        var point5X = x1 - headRadius * 2;
-        var point6X = x1 - headRadius;
+        var point1X = Math.Round(x1 + headRadius, 2);
+        var point2Y = Math.Round(y1 - length + headRadius * 2, 2);
+        var point3X = Math.Round(x1 + headRadius * 2, 2);
+        var point4Y = Math.Round(y1 - length, 2);
+        var point5X = Math.Round(x1 - headRadius * 2, 2);
+        var point6X = Math.Round(x1 - headRadius, 2);
         var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
-        var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill: rgb(255, 255, 0); opacity: 0.7;' /></svg>";
+        var playerArrow = $"<polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill:rgb(255, 255, 0);' />";
         var script = $@"
 (function(){{
     if(window._chessBoardObserver){{
@@ -279,19 +338,21 @@ public partial class MainWindow
     }}
     window._disableArrowObserver = true;
     function removeArrow(){{
-        var existingArrow = document.getElementById('chezzz-arrow');
+        existingArrow = document.getElementById('{ARROW_PREFIX}');
         if(existingArrow){{
             existingArrow.parentNode.removeChild(existingArrow);
         }}
     }}
-    removeArrow();
     var chessBoard = document.querySelector('{_chessBoardTag}');
     if(chessBoard){{
-        var div = document.createElement('div');
-        div.setAttribute('id', 'chezzz-arrow');
-        div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9');
-        div.innerHTML = `{svgElement}`;
-        chessBoard.appendChild(div);
+        var div = document.getElementById('{ARROW_PREFIX}');
+        if(!div){{
+            var div = document.createElement('div');
+            div.setAttribute('id', '{ARROW_PREFIX}');
+            div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9; opacity:0.5;');
+            chessBoard.appendChild(div);
+        }}
+        div.innerHTML = `<svg viewBox='0 0 100 100'>{_opponentArrow}{playerArrow}</svg>`;
     }}
     setTimeout(function(){{
         window._disableArrowObserver = false;
@@ -302,6 +363,7 @@ public partial class MainWindow
             mutations.forEach(function(mutation){{
                 if(mutation.type === 'childList' || mutation.type === 'attributes'){{
                     removeArrow();
+                    window._disableArrowObserver = true;
                 }}
             }});
         }});

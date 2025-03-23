@@ -296,6 +296,17 @@ public class Board
         return true;
     }
 
+    public string GetLastMove()
+    {
+        if (_movelist.Count == 0) {
+            return string.Empty;
+        }
+
+        var sanmove = _movelist.Last();
+        var move = $"{sanmove.From}{sanmove.To}";
+        return move;
+    }
+
     public string ToFen()
     {
         if (!_isGame) {
