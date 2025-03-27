@@ -185,6 +185,8 @@ public partial class MainWindow
         const string script = "document.documentElement.outerHTML";
         var result = await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
         var decodedHtml = Regex.Unescape(result.Trim('"'));
+        var executablePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        await File.WriteAllTextAsync( Path.Combine(executablePath!, "decodedHtml.html"), decodedHtml);
 
         var requiredTime = _requiredTime.GetValue();
         var error = string.Empty;

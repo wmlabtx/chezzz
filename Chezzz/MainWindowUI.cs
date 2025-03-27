@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Globalization;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -259,20 +260,22 @@ public partial class MainWindow
 
         var dx = x2 - x1;
         var dy = y1 - y2;
-        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2);
+        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2).ToString(CultureInfo.InvariantCulture);
         var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
+        var sx1 = Math.Round(x1, 2).ToString(CultureInfo.InvariantCulture);
+        var sy1 = Math.Round(y1, 2).ToString(CultureInfo.InvariantCulture);
         const double headRadius = 1.5;
-        var point1X = Math.Round(x1 + headRadius, 2);
-        var point2Y = Math.Round(y1 - length + headRadius * 2, 2);
-        var point3X = Math.Round(x1 + headRadius * 2, 2);
-        var point4Y = Math.Round(y1 - length, 2);
-        var point5X = Math.Round(x1 - headRadius * 2, 2);
-        var point6X = Math.Round(x1 - headRadius, 2);
-        var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
-        var pointCX = Math.Round((x1 + x2) / 2, 2);
-        var pointCY = Math.Round((y1 + y2) / 2, 2);
+        var point1X = Math.Round(x1 + headRadius, 2).ToString(CultureInfo.InvariantCulture);
+        var point2Y = Math.Round(y1 - length + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+        var point3X = Math.Round(x1 + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+        var point4Y = Math.Round(y1 - length, 2).ToString(CultureInfo.InvariantCulture);
+        var point5X = Math.Round(x1 - headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+        var point6X = Math.Round(x1 - headRadius, 2).ToString(CultureInfo.InvariantCulture);
+        var points = $"{point1X},{sy1} {point1X},{point2Y} {point3X},{point2Y} {sx1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{sy1}";
+        var pointCX = Math.Round((x1 + x2) / 2, 2).ToString(CultureInfo.InvariantCulture);
+        var pointCY = Math.Round((y1 + y2) / 2, 2).ToString(CultureInfo.InvariantCulture);
         var arrow = $@"
-<polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill:rgb({color.R}, {color.G}, {color.B});' />
+<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb({color.R}, {color.G}, {color.B});' />
 <circle cx='{pointCX}' cy='{pointCY}' r='4' style='fill: rgb({darkColor.R}, {darkColor.G}, {darkColor.B}); stroke: rgb({color.R}, {color.G}, {color.B}); stroke-width: 1;'/>
 <text x='{pointCX}' y='{pointCY}' text-anchor='middle' alignment-baseline='middle' style='font-size: 2.5; fill: rgb({color.R}, {color.G}, {color.B}); font-family: Impact;'>{scoreText}</text>";
         return arrow;
@@ -319,17 +322,19 @@ public partial class MainWindow
 
         var dx = x2 - x1;
         var dy = y1 - y2;
-        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2);
+        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2).ToString(CultureInfo.InvariantCulture);
         var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
+        var sx1 = Math.Round(x1, 2).ToString(CultureInfo.InvariantCulture);
+        var sy1 = Math.Round(y1, 2).ToString(CultureInfo.InvariantCulture);
         const double headRadius = 1.5;
-        var point1X = Math.Round(x1 + headRadius, 2);
-        var point2Y = Math.Round(y1 - length + headRadius * 2, 2);
-        var point3X = Math.Round(x1 + headRadius * 2, 2);
-        var point4Y = Math.Round(y1 - length, 2);
-        var point5X = Math.Round(x1 - headRadius * 2, 2);
-        var point6X = Math.Round(x1 - headRadius, 2);
-        var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
-        var playerArrow = $"<polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill:rgb(255, 255, 0);' />";
+        var point1X = Math.Round(x1 + headRadius, 2).ToString(CultureInfo.InvariantCulture);
+        var point2Y = Math.Round(y1 - length + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+        var point3X = Math.Round(x1 + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+        var point4Y = Math.Round(y1 - length, 2).ToString(CultureInfo.InvariantCulture);
+        var point5X = Math.Round(x1 - headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+        var point6X = Math.Round(x1 - headRadius, 2).ToString(CultureInfo.InvariantCulture);
+        var points = $"{point1X},{sy1} {point1X},{point2Y} {point3X},{point2Y} {sx1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{sy1}";
+        var playerArrow = $"<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb(255, 255, 0);' />";
         var script = $@"
 (function(){{
     if(window._chessBoardObserver){{
