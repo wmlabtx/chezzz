@@ -1,6 +1,6 @@
 # What is this even about?
 
-![header](https://github.com/user-attachments/assets/0c7edc20-f734-4925-99d5-00de4c8ba48d)
+![header-0 1 8](https://github.com/user-attachments/assets/86752483-01bf-44fd-891a-d67447c81a14)
 
 This is a two-month story about the creation of a chess advisor to assist in playing on chess.com and lichess.org. It is a small Windows application written on csharp and wpf that requires [Stockfish](https://stockfishchess.org/download/) to function. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github](https://github.com/wmlabtx/chezzz). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process. You could consider this program a cheat, and that's partly true. But I would like to focus on its technical details.
 
@@ -221,10 +221,39 @@ By the way, FEN in the status bar can be highlighted with the mouse and copied. 
 
 "**kq - 2 12**" here means that only black player can perform both their castlings ("kq"), there are no *en passant* captures ("-"), two half-moves have been made without pawn movements, and 12 full moves have passed since the start of the game. Now the Stockfish position analysis is 100% accurate.
 
-The actual interface.
-
 ![0 1 1-8-p](https://github.com/user-attachments/assets/592371b3-479a-4212-804e-342537be82cb)
+
+Everything looks good, but I was asked in the comments to add one more function.
+
+# Is the opponent a cheater?
+
+It's annoying when the opponent uses hints. You can detect it like this: go back one move, analyze the position from the opponent's perspective, and evaluate their move. If it's always the best or one of the best moves — that’s a red flag. According to estimates, even the world's top players with a 2800 rating play with an efficiency of 0.8–0.9, meaning every fifth to tenth move is not optimal — and that's normal. So, to our yellow arrow, I’m adding two more: the best possible move for the opponent according to Stockfish, and the move they actually made. Something like this:
+
+![0 1 8-1](https://github.com/user-attachments/assets/d0c75ce7-8854-41d9-92cb-bd49e3bfc62a)
+
+The green arrow labeled "BEST" indicates the opponent’s best move (e5f4), and the second arrow — gray, labeled "-0.52" — shows the move they actually played. The second arrow is color-coded based on the strength of the move: green means it’s a good move (if the opponent consistently plays only green moves, they’re most likely cheating), gray means a weak move, and red indicates a blunder. Like here:
+
+![0 1 8-2](https://github.com/user-attachments/assets/d61660dd-8b31-4359-953e-aaf1eb531355)
+
+The numbers inside the arrow help evaluate the strength of the move. If it’s around -1, it’s a bad move — the opponent is blundering a pawn or losing the initiative. -3 means they’re blundering a minor piece. Large negative values indicate the opponent missed a quick checkmate. For an honest player, it’s normal to have a mix of green, gray, and occasionally red moves. A cheater makes only green moves.
+
+In the first version, I analyzed the opponent's position first, then mine. That took twice the time. In the current version, I launch two Stockfish processes at once — one for the opponent’s position and one for mine — and display their results simultaneously. The analysis speed instantly doubled.
+
+```C#
+for (var i = 0; i < 2; i++) {
+    stockfish[i] = new Process {
+	StartInfo = new ProcessStartInfo {
+	    FileName = _stockfishPath,
+	    RedirectStandardInput = true,
+	    RedirectStandardOutput = true,
+	    UseShellExecute = false,
+	    CreateNoWindow = true
+	}
+    };
+    stockfish[i].Start();
+    ...
+```
 
 # Conclusion
 
- I made this thing (and I'm sharing it for free) for fun. I remind you that cheating is unfair and dishonest towards your opponent. On the other hand, this advisor allows you to "level" the strength of the game if the opponents are in different weight categories. The games become interesting. If the opponent has a rating of, for example, 1800, setting the strength to "+0.50" will allow you to play at a 1900-2000 rating. Of course, this should only be done with the permission and approval of the opponent. For training purposes, for example.
+I made this thing (and I'm sharing it for free) for fun. I remind you that cheating is unfair and dishonest towards your opponent. On the other hand, this advisor allows you to "level" the strength of the game if the opponents are in different weight categories. The games become interesting. If the opponent has a rating of, for example, 1800, setting the strength to "+0.50" will allow you to play at a 1900-2000 rating. Of course, this should only be done with the permission and approval of the opponent. For training purposes, for example.
