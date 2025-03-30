@@ -598,7 +598,8 @@ public class Board
         if (Math.Abs(v) == 1 && Math.Abs(h) == 1) {
             var piece = GetPiece(new Position(move.To.Y - v, move.To.X));
             if (piece != null && piece.Color != move.Piece.Color && piece.Type == 'p') {
-                return LastMoveEnPassantPosition() == move.To;
+                var lastMove = LastMoveEnPassantPosition();
+                return lastMove.X == move.To.X && lastMove.Y == move.To.Y;
             }
         }
 

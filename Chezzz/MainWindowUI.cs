@@ -225,10 +225,10 @@ public partial class MainWindow
         }
     }
 
-    private string GetArrowOpponent(int index)
+    private string GetArrowOpponent(int index, IReadOnlyDictionary<int, Move> moves)
     {
-        var move = _moves[index];
-        var diff = move.Score - _moves[0].Score;
+        var move = moves[index];
+        var diff = move.Score - moves[0].Score;
         Color color;
         double normalizedValue;
         if (diff >= -50) {
@@ -279,25 +279,6 @@ public partial class MainWindow
 <circle cx='{pointCX}' cy='{pointCY}' r='4' style='fill: rgb({darkColor.R}, {darkColor.G}, {darkColor.B}); stroke: rgb({color.R}, {color.G}, {color.B}); stroke-width: 1;'/>
 <text x='{pointCX}' y='{pointCY}' text-anchor='middle' alignment-baseline='middle' style='font-size: 2.5; fill: rgb({color.R}, {color.G}, {color.B}); font-family: Impact;'>{scoreText}</text>";
         return arrow;
-    }
-
-    private async Task DrawArrowOpponent()
-    {
-        var script = $@"
-(function(){{
-    var chessBoard = document.querySelector('{_chessBoardTag}');
-    if(chessBoard){{
-        var div = document.getElementById('{ARROW_PREFIX}');
-        if(!div){{
-            var div = document.createElement('div');
-            div.setAttribute('id', '{ARROW_PREFIX}');
-            div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9; opacity:0.5;');
-            chessBoard.appendChild(div);
-        }}
-        div.innerHTML = `<svg viewBox='0 0 100 100'>{_opponentArrow}</svg>`;
-    }}
-}})();";
-        await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
     }
 
     private async Task AddArrowPlayer()

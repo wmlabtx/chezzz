@@ -186,13 +186,16 @@ public class BoardTests
             "40. h4 Be8 41. g5 Bh5 42. Rh2 bxa3 43. f5 Rb4 44. Ra1 Ra4 45. Ra2 Bf7 46. Ra1 c4 47. h5 Be8 48. Kf4 c3 49. Rhh1 a2 " +
             "50. Ke5 h6 51. g6 Bb5 52. Rhd1 Rd2 53. f6 Bc4 54. f7+ Kf8 55. Rg1 Ba6 56. Rg4 Bb7 57. Rg2 Bc6 58. Kf5 Ke7 59. Rgg1 Rb4 " +
             "60. Rgf1 Bb5 61. Rh1 Bd7+ 62. Ke5 Rb5+ 63. Kf4 Rf2+ 64. Kg3 Rf3+ 65. Kh2 Rxe3 66. Rhf1 Rh3+ 67. Kg2 Rg5+ 68. Kf2 Bb5 69. f8=Q+ Kxf8 " +
-            "70. Rfb1 e3+ 71. Ke1 Rg1#"
+            "70. Rfb1 e3+ 71. Ke1 Rg1#",
+
+            "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 cxd4 5. cxd4 Bb4+ 6. Nc3 Nc6 7. Nf3 Nge7 8. Bd3 O-O 9. Bxh7+ Kxh7 10. Ng5+ Kg6 11. h4 Nxd4 12. Qg4 f5 13. h5+ Kh6 14. Nxe6+ g5 15. hxg6#"
         };
 
         var fens = new[] {
             "8/5p2/5k2/3R1p1p/3P2pP/4R1P1/KP6/8 b - - 0 35",
             "8/8/4K3/4N3/5k2/8/4q3/8 w - - 16 73",
-            "5k2/6p1/6Pp/pb5P/8/2p1p2r/p1P5/RR2K1r1 w - - 2 72"
+            "5k2/6p1/6Pp/pb5P/8/2p1p2r/p1P5/RR2K1r1 w - - 2 72",
+            "r1bq1r2/pp2n3/4N1Pk/3pPp2/1b1n2Q1/2N5/PP3PP1/R1B1K2R b KQ - 0 15"
         };
 
         for (var i = 0; i < pgns.Length; i++) {
@@ -201,12 +204,13 @@ public class BoardTests
             var board = new Chezzz.San.Board();
             board.StartGame();
             var moves = GetMoves(pgn);
+            var fen = string.Empty;
             for (var j = 0; j < moves.Length; j++) {
                 var move = moves[j];
                 Assert.IsTrue(board.Move(move), $"Move {j + 1} ({move}) should be valid");
+                fen = board.ToFen();
             }
-
-            var fen = board.ToFen();
+            
             Assert.AreEqual(expectedFen, fen, $"Game {i + 1} final position does not match expected FEN");
         }
     }

@@ -20,6 +20,7 @@ public partial class MainWindow
     private readonly SortedList<int, Move> _moves = new();
     private readonly SortedSet<int> _selectedMoves = new();
     private int _selectedIndex;
+
     private string _opponentArrow;
 
     private readonly IntSetting _requiredTime;
@@ -28,8 +29,6 @@ public partial class MainWindow
     private readonly SortedDictionary<string, string> _openings = new();
 
     private const string ARROW_PREFIX = "chezzz";
-    private const string ARROW_PLAYER = $"{ARROW_PREFIX}-player";
-    private const string ARROW_OPPONENT = $"{ARROW_PREFIX}-opponent";
 
     public MainWindow()
     {
