@@ -237,12 +237,7 @@ public partial class MainWindow
                                     }
                                 }
 
-                                _opponentArrow = index switch {
-                                    0 => GetArrowOpponent(0, opponentMoves),
-                                    > 0 => GetArrowOpponent(index, opponentMoves) + GetArrowOpponent(0, opponentMoves),
-                                    _ => string.Empty
-                                };
-
+                                _opponentArrow = GetArrowOpponent(index, opponentMoves);
                                 await AddArrowPlayer();
                                 opponentMoves.Clear();
                             }

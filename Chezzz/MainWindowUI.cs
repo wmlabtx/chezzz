@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -83,6 +84,9 @@ public partial class MainWindow
 
     private void ShowMoves()
     {
+        var sbSvg = new StringBuilder();
+        var sbStyle = new StringBuilder();
+
         Panel.Children.Clear();
 
         var groups = _moves
@@ -109,6 +113,17 @@ public partial class MainWindow
             }
 
             Panel.Children.Add(groupLabel);
+
+            var bst = bestMove.FirstMove[..2];
+            var x1 = (bst[0] - 'a') * 12.5 + 6.25;
+            var y1 = ('8' - bst[1]) * 12.5 + 6.25;
+            if (!_isWhite) {
+                x1 = 100.0 - x1;
+                y1 = 100.0 - y1;
+            }
+
+            sbSvg.Append($@"<circle id='{ARROW_PREFIX}-a{bst}' cx='{x1}' cy='{y1}' r='2' fill='transparent' stroke='none' stroke-width='0.5' cursor='pointer' />");
+
             foreach (var move in group) {
                 var color = GetColor(move.Score);
                 var darkenColor = DarkenColor(color, 0.5);
@@ -129,7 +144,7 @@ public partial class MainWindow
                 };
 
                 var column = 0;
-                
+
                 var scoreTextBlock = new TextBlock {
                     Text = move.ScoreText,
                     Foreground = Brushes.White,
@@ -221,8 +236,29 @@ public partial class MainWindow
 
                 ToolTipService.SetInitialShowDelay(moveButton, 0);
                 Panel.Children.Add(moveButton);
+
+                var src = move.FirstMove.Substring(2, 2);
+                x1 = (src[0] - 'a') * 12.5 + 6.25;
+                y1 = ('8' - src[1]) * 12.5 + 6.25;
+                if (!_isWhite) {
+                    x1 = 100.0 - x1;
+                    y1 = 100.0 - y1;
+                }
+
+                sbSvg.Append($"<circle id='{ARROW_PREFIX}-a{bst}-c{src}' cx='{x1}' cy='{y1}' r='4' style='fill:black; stroke:rgb({color.R},{color.G},{color.B}); stroke-width:1;' />");
+                sbSvg.AppendLine($"<text id='{ARROW_PREFIX}-a{bst}-t{src}' x='{x1}' y='{y1}' text-anchor='middle' alignment-baseline='middle' style='font-size:2.5; fill:rgb({color.R},{color.G},{color.B}); font-family:Impact;'>{move.ScoreText}</text>");
+
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-c{src} {{opacity:0;transition: opacity 0.3s ease;}}");
+                sbStyle.AppendLine($"#{ARROW_PREFIX}-a{bst}-t{src} {{opacity:0;transition: opacity 0.3s ease;}}");
             }
         }
+
+        _svg = sbSvg.ToString();
+        _style = sbStyle.ToString();
     }
 
     private string GetArrowOpponent(int index, IReadOnlyDictionary<int, Move> moves)
@@ -272,12 +308,7 @@ public partial class MainWindow
         var point5X = Math.Round(x1 - headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
         var point6X = Math.Round(x1 - headRadius, 2).ToString(CultureInfo.InvariantCulture);
         var points = $"{point1X},{sy1} {point1X},{point2Y} {point3X},{point2Y} {sx1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{sy1}";
-        var pointCX = Math.Round((x1 + x2) / 2, 2).ToString(CultureInfo.InvariantCulture);
-        var pointCY = Math.Round((y1 + y2) / 2, 2).ToString(CultureInfo.InvariantCulture);
-        var arrow = $@"
-<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb({color.R}, {color.G}, {color.B});' />
-<circle cx='{pointCX}' cy='{pointCY}' r='4' style='fill: rgb({darkColor.R}, {darkColor.G}, {darkColor.B}); stroke: rgb({color.R}, {color.G}, {color.B}); stroke-width: 1;'/>
-<text x='{pointCX}' y='{pointCY}' text-anchor='middle' alignment-baseline='middle' style='font-size: 2.5; fill: rgb({color.R}, {color.G}, {color.B}); font-family: Impact;'>{scoreText}</text>";
+        var arrow = $"<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb({color.R},{color.G},{color.B}); opacity:{OPACITY};' />";
         return arrow;
     }
 
@@ -315,7 +346,8 @@ public partial class MainWindow
         var point5X = Math.Round(x1 - headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
         var point6X = Math.Round(x1 - headRadius, 2).ToString(CultureInfo.InvariantCulture);
         var points = $"{point1X},{sy1} {point1X},{point2Y} {point3X},{point2Y} {sx1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{sy1}";
-        var playerArrow = $"<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb(255, 255, 0);' />";
+        var playerArrow = $"<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb(255,255,0); opacity:{OPACITY};' />";
+        var layer = $"<svg viewBox='0 0 100 100'>{playerArrow}{_opponentArrow}{_svg}</svg><style>{_style}</style>";
         var script = $@"
 (function(){{
     if(window._chessBoardObserver){{
@@ -335,10 +367,10 @@ public partial class MainWindow
         if(!div){{
             var div = document.createElement('div');
             div.setAttribute('id', '{ARROW_PREFIX}');
-            div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9; opacity:0.5;');
+            div.setAttribute('style', 'position:relative; z-index:9;');
             chessBoard.appendChild(div);
         }}
-        div.innerHTML = `<svg viewBox='0 0 100 100'>{_opponentArrow}{playerArrow}</svg>`;
+        div.innerHTML = `{layer}`;
     }}
     setTimeout(function(){{
         window._disableArrowObserver = false;

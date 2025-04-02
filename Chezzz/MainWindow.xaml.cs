@@ -21,7 +21,11 @@ public partial class MainWindow
     private readonly SortedSet<int> _selectedMoves = new();
     private int _selectedIndex;
 
+    private string _svg;
+    private string _style;
     private string _opponentArrow;
+
+    private const string OPACITY = "0.7";
 
     private readonly IntSetting _requiredTime;
     private readonly IntSetting _requiredScore;
@@ -61,6 +65,8 @@ public partial class MainWindow
             _status.Report($"{_stockfishPath} not found");
         }
 
+        _svg = string.Empty;
+        _style = string.Empty;
         _opponentArrow = string.Empty;
     }
 
