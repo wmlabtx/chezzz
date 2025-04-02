@@ -22,9 +22,6 @@ public partial class MainWindow
     [GeneratedRegex(@"<piece\s+class\s*=\s*""(?<CCC>\w+)\s+(?<FFF>\w+)""\s+style\s*=\s*""transform:\s*translate\(\s*(?<XXX>\d+)px\s*,\s*(?<YYY>\d+)px\s*\);?""\s*><\/piece>", RegexOptions.IgnoreCase, "en-US")]
     private static partial Regex PieceRegex();
 
-    [GeneratedRegex(@"<wc-simple-move-list(?<block>[\s\S]*?)</wc-simple-move-list>", RegexOptions.IgnoreCase)]
-    private static partial Regex SimpleMoveListRegex();
-
     private static bool ProcessSanMoves(IReadOnlyList<string> sanmoves, out string previousFen, out string previousMove, out string currentFen)
     {
         previousFen = string.Empty;
@@ -119,18 +116,22 @@ public partial class MainWindow
         currentFen = board.ToFen(_isWhite);
 
         var sanmoves = new List<string>();
-        var simpleMoveListMatch = SimpleMoveListRegex().Match(decodedHtml);
-        if (simpleMoveListMatch.Success) {
-            var simpleMoveListContent = simpleMoveListMatch.Groups["block"].Value;
-            
-            const string pattern = @"<span\s+class=""node-highlight-content[^""]*"">\s*(?:<span[^>]*data-figurine=""(?<figurine>[^""]+)""[^>]*></span>\s*)?(?<move>[^\s<]+)";
-            var smatches = Regex.Matches(simpleMoveListContent, pattern, RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
-            foreach (Match smatch in smatches) {
-                var figurine = smatch.Groups["figurine"].Value.Trim();
-                var movePart = smatch.Groups["move"].Value.Trim();
-                var fullMove = string.IsNullOrEmpty(figurine) ? movePart : figurine + movePart;
-                sanmoves.Add(fullMove);
+        // <span class="node-highlight-content offset-for-annotation-icon">d4 </span></div>
+        // <span class="node-highlight-content offset-for-annotation-icon"><span class="icon-font-chess rook-white " data-figurine="R"></span> xf6 </span></div>
+        // <span class="node-highlight-content offset-for-annotation-icon selected">b1=Q+ </span></div>
+
+        const string pattern = @"<span class=""node-highlight-content offset-for-annotation-icon(?:\s+selected)?"">(?:<span.*?data-figurine=""([^""]+)""></span>)?\s*([^<]+)</span>";
+
+        matches = Regex.Matches(decodedHtml, pattern);
+        foreach (var m in matches.Cast<Match>()) {
+            var isSelected = m.Value.Contains("selected");
+            var moveText = m.Groups[2].Value.Trim();
+            var figurine = m.Groups[1].Success ? m.Groups[1].Value : "";
+            var completeMove = !string.IsNullOrEmpty(figurine) ? figurine + moveText : moveText;
+            sanmoves.Add(completeMove);
+            if (isSelected) {
+                break;
             }
         }
 

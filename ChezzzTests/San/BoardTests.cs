@@ -188,14 +188,20 @@ public class BoardTests
             "60. Rgf1 Bb5 61. Rh1 Bd7+ 62. Ke5 Rb5+ 63. Kf4 Rf2+ 64. Kg3 Rf3+ 65. Kh2 Rxe3 66. Rhf1 Rh3+ 67. Kg2 Rg5+ 68. Kf2 Bb5 69. f8=Q+ Kxf8 " +
             "70. Rfb1 e3+ 71. Ke1 Rg1#",
 
-            "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 cxd4 5. cxd4 Bb4+ 6. Nc3 Nc6 7. Nf3 Nge7 8. Bd3 O-O 9. Bxh7+ Kxh7 10. Ng5+ Kg6 11. h4 Nxd4 12. Qg4 f5 13. h5+ Kh6 14. Nxe6+ g5 15. hxg6#"
+            "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 cxd4 5. cxd4 Bb4+ 6. Nc3 Nc6 7. Nf3 Nge7 8. Bd3 O-O 9. Bxh7+ Kxh7 10. Ng5+ Kg6 11. h4 Nxd4 12. Qg4 f5 13. h5+ Kh6 14. Nxe6+ g5 15. hxg6#",
+
+            "1. d4 e6 2. Bf4 d5 3. e3 c5 4. Nc3 Nc6 5. Nb5 e5 6. dxe5 a6 7. Nd6+ Bxd6 8. exd6 Be6 9. Be2 Qb6 " + 
+            "10. Rb1 Nf6 11. Bf3 Qa5+ 12. c3 Qxa2 13. Ne2 h6 14. O-O g5 15. Bg3 g4 16. Nf4 gxf3 17. Nxe6 fxg2 18. Kxg2 fxe6 19. Bh4 Qc4 " + 
+            "20. Bxf6 Qe4+ 21. f3 Qg6+ 22. Kf2 Qxf6 23. Rg1 Qh4+ 24. Kf1 Qxh2 25. Qe2 Qh3+ 26. Ke1 Qh4+ 27. Kd2 Qf6 28. f4 O-O-O 29. Rg2 Rxd6 " + 
+            "30. Rbg1 d4 31. Rg6 dxc3+ 32. Ke1 cxb2 33. Rxf6 b1=Q+ 34. Kf2 Rg8 35. Rxg8+"
         };
 
         var fens = new[] {
             "8/5p2/5k2/3R1p1p/3P2pP/4R1P1/KP6/8 b - - 0 35",
             "8/8/4K3/4N3/5k2/8/4q3/8 w - - 16 73",
             "5k2/6p1/6Pp/pb5P/8/2p1p2r/p1P5/RR2K1r1 w - - 2 72",
-            "r1bq1r2/pp2n3/4N1Pk/3pPp2/1b1n2Q1/2N5/PP3PP1/R1B1K2R b KQ - 0 15"
+            "r1bq1r2/pp2n3/4N1Pk/3pPp2/1b1n2Q1/2N5/PP3PP1/R1B1K2R b KQ - 0 15",
+            "2k3R1/1p6/p1nrpR1p/2p5/5P2/4P3/4QK2/1q6 b - - 0 35"
         };
 
         for (var i = 0; i < pgns.Length; i++) {
