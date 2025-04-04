@@ -18,7 +18,6 @@ public partial class MainWindow
     private string _chessBoardTag;
 
     private readonly SortedList<int, Move> _moves = new();
-    private readonly SortedSet<int> _selectedMoves = new();
     private int _selectedIndex;
 
     private string _svg;
@@ -28,7 +27,6 @@ public partial class MainWindow
     private const string OPACITY = "0.7";
 
     private readonly IntSetting _requiredTime;
-    private readonly IntSetting _requiredScore;
 
     private readonly SortedDictionary<string, string> _openings = new();
 
@@ -44,16 +42,6 @@ public partial class MainWindow
             nameof(Settings.Default.RequiredTime), 
             new[] {
                 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
-            });
-
-        _requiredScore = new IntSetting(
-            nameof(Settings.Default.RequiredScore),
-            new[] {
-                NEGATIVE_MATE,
-                -1000, -900, -800, -700, -600, -500, -450, -400, -350, -300, -250, -200, -150, -100, -75, -50, -25,
-                0,
-                25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000,
-                POSITIVE_MATE
             });
 
         _status = new Progress<string>(message => Status.Text = message);
@@ -82,7 +70,7 @@ public partial class MainWindow
 
                 _chessBoardTag = selectedPlatform switch {
                     AppConsts.CHESS => "wc-chess-board",
-                    AppConsts.LICHESS => "cg-container",
+                    AppConsts.LICHESS => "cg-board",
                     _ => _chessBoardTag
                 };
             }
@@ -112,16 +100,6 @@ public partial class MainWindow
     private void IncreaseTime_OnClick(object sender, RoutedEventArgs e)
     {
         ChangeRequiredTime(+1);
-    }
-
-    private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
-    {
-        ChangeRequiredScore(-1);
-    }
-
-    private void IncreaseScore_OnClick(object sender, RoutedEventArgs e)
-    {
-        ChangeRequiredScore(+1);
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

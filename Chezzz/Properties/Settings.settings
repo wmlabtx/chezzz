@@ -5,8 +5,5 @@
     <Setting Name="RequiredTime" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1000</Value>
     </Setting>
-    <Setting Name="RequiredScore" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">500</Value>
-    </Setting>
   </Settings>
 </SettingsFile>

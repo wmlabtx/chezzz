@@ -1,173 +1,24 @@
-﻿namespace ChezzzTests.San;
+﻿using Chess;
+
+namespace ChezzzTests.San;
 
 [TestClass]
 public class BoardTests
 {
-    /// <summary>
-    /// Tests the correct placement and FEN representation of kings on an empty board
-    /// </summary>
-    [TestMethod]
-    public void Board_WithOnlyKings_GeneratesCorrectFen()
-    {
-        // Arrange
-        const string expectedFen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
-        var board = new Chezzz.San.Board();
-        var whiteKingPosition = new Chezzz.San.Position("e1");
-        var blackKingPosition = new Chezzz.San.Position("e8");
-
-        // Act
-        board.PutPiece(whiteKingPosition, new Chezzz.San.Piece('w', 'k'));
-        board.PutPiece(blackKingPosition, new Chezzz.San.Piece('b', 'k'));
-
-        // Assert
-        Assert.IsNotNull(board.GetPiece(whiteKingPosition), "White king should be present on e1");
-        Assert.IsNotNull(board.GetPiece(blackKingPosition), "Black king should be present on e8");
-        var fen = board.ToFen(true);
-        Assert.AreEqual(expectedFen, fen, "Generated FEN string should match expected value");
-    }
-
-
-    /// <summary>
-    /// Verifies that a newly initialized chess board has the correct starting position
-    /// and generates the standard FEN notation for the initial game state
-    /// </summary>
-    [TestMethod]
-    public void Board_WhenInitialized_HasCorrectStartingPosition()
-    {
-        // Arrange
-        const string expectedInitialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        var board = new Chezzz.San.Board();
-
-        // Act
-        board.StartGame();
-
-        // Assert
-        var actualFen = board.ToFen();
-        Assert.AreEqual(expectedInitialFen, actualFen,
-            "Initial board position should match standard chess starting position");
-    }
-
-    /// <summary>
-    /// Tests basic pawn movement validation and board state after moves
-    /// </summary>
-    [TestMethod]
-    public void Move_ValidPawnMove_UpdatesBoardStateCorrectly()
-    {
-        // Arrange
-        var board = new Chezzz.San.Board();
-        board.StartGame();
-        const string expectedFen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
-
-        // Act
-        var moveSuccessful = board.Move("e4");
-
-        // Assert
-        Assert.IsTrue(moveSuccessful, "Valid move e4 should be accepted");
-        Assert.AreEqual(expectedFen, board.ToFen(),
-            "Board FEN should reflect e4 pawn move");
-    }
-
-    /// <summary>
-    /// Tests invalid move handling
-    /// </summary>
-    [TestMethod]
-    public void Move_InvalidMove_ReturnsFalse()
-    {
-        // Arrange
-        var board = new Chezzz.San.Board();
-        board.StartGame();
-
-        // Act
-        var moveSuccessful = board.Move("e5"); // Invalid as white's first move
-
-        // Assert
-        Assert.IsFalse(moveSuccessful, "Invalid move e5 should be rejected");
-        Assert.AreEqual("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-            board.ToFen(),
-            "Board should remain in initial position after invalid move");
-    }
-
-    /// <summary>
-    /// Parses chess moves from PGN format, filtering out move numbers
-    /// </summary>
     private static string[] GetMoves(string pgn)
     {
         return pgn.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(move => !move.Contains('.')) // Filter move numbers and check annotations
+            .Where(move => !move.Contains('.'))
             .ToArray();
     }
 
-    /// <summary>
-    /// Tests a complete chess game sequence, verifying FEN positions at each move
-    /// </summary>
-    [TestMethod]
-    public void PlayGame_CompleteGameSequence_GeneratesCorrectPositionsAtEachMove()
-    {
-        const string pgn =
-            @"1. e4 e5 2. Nf3 Nf6 3. Nxe5 Nc6 4. d4 Nxe5 5. dxe5 Nxe4 6. Qe2 Ng5 7. f4 Ne6 8. Nc3 Bc5 9. Bd2 Nd4 " +
-            "10. Qe4 Qh4+ 11. g3 Qg4 12. Be2 Nxe2 13. Nxe2 Qe6 14. f5 Qb6 15. Rf1 Qxb2 16. Bc3 Qb6 17. Qh4 Qc6 18. e6 dxe6 19. Bxg7 Rg8 " +
-            "20. Qxh7 Rxg7 21. Qxg7 Bb4+ 22. c3 Bf8 23. Qg5 exf5";
-
-        var fens = new[] {
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", // e4
-            "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2", // e5
-            "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2", // Nf3
-            "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3", // Nf6
-            "rnbqkb1r/pppp1ppp/5n2/4N3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 3", // Nxe5
-            "r1bqkb1r/pppp1ppp/2n2n2/4N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 1 4", // Nc6
-            "r1bqkb1r/pppp1ppp/2n2n2/4N3/3PP3/8/PPP2PPP/RNBQKB1R b KQkq d3 0 4", // d4
-            "r1bqkb1r/pppp1ppp/5n2/4n3/3PP3/8/PPP2PPP/RNBQKB1R w KQkq - 0 5", // Nxe5
-            "r1bqkb1r/pppp1ppp/5n2/4P3/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 5", // dxe5
-            "r1bqkb1r/pppp1ppp/8/4P3/4n3/8/PPP2PPP/RNBQKB1R w KQkq - 0 6", // Nxe4
-            "r1bqkb1r/pppp1ppp/8/4P3/4n3/8/PPP1QPPP/RNB1KB1R b KQkq - 1 6", // Qe2
-            "r1bqkb1r/pppp1ppp/8/4P1n1/8/8/PPP1QPPP/RNB1KB1R w KQkq - 2 7", // Ng5
-            "r1bqkb1r/pppp1ppp/8/4P1n1/5P2/8/PPP1Q1PP/RNB1KB1R b KQkq f3 0 7", // f4
-            "r1bqkb1r/pppp1ppp/4n3/4P3/5P2/8/PPP1Q1PP/RNB1KB1R w KQkq - 1 8", // Ne6
-            "r1bqkb1r/pppp1ppp/4n3/4P3/5P2/2N5/PPP1Q1PP/R1B1KB1R b KQkq - 2 8", // Nc3
-            "r1bqk2r/pppp1ppp/4n3/2b1P3/5P2/2N5/PPP1Q1PP/R1B1KB1R w KQkq - 3 9", // Bc5
-            "r1bqk2r/pppp1ppp/4n3/2b1P3/5P2/2N5/PPPBQ1PP/R3KB1R b KQkq - 4 9", // Bd2
-            "r1bqk2r/pppp1ppp/8/2b1P3/3n1P2/2N5/PPPBQ1PP/R3KB1R w KQkq - 5 10", // Nd4
-            "r1bqk2r/pppp1ppp/8/2b1P3/3nQP2/2N5/PPPB2PP/R3KB1R b KQkq - 6 10", // Qe4
-            "r1b1k2r/pppp1ppp/8/2b1P3/3nQP1q/2N5/PPPB2PP/R3KB1R w KQkq - 7 11" // Qh4+
-        };
-
-        const string expectedFinalPosition = "r1b1kb2/ppp2p2/2q5/5pQ1/8/2P3P1/P3N2P/R3KR2 w Qq - 0 24";
-
-        // Arrange
-        var board = new Chezzz.San.Board();
-        board.StartGame();
-
-        // Act & Assert
-        var moves = GetMoves(pgn);
-
-        for (var i = 0; i < moves.Length; i++) {
-            var move = moves[i];
-            Assert.IsTrue(board.Move(move), $"Move {i + 1} ({move}) should be valid");
-
-            if (i < fens.Length) {
-                var expectedFen = fens[i];
-                Assert.AreEqual(expectedFen, board.ToFen(),
-                    $"Position after move {i + 1} ({move}) does not match expected FEN");
-            }
-        }
-
-        // Verify final position
-        Assert.AreEqual(expectedFinalPosition, board.ToFen(),
-            "Final position does not match expected FEN");
-    }
-
-    /// <summary>
-    /// Tests multiple complete chess games, verifying that each game reaches its expected final position.
-    /// Each game is played through its entire sequence of moves and the final board state is compared
-    /// against a known FEN string representation.
-    /// </summary>
     [TestMethod]
     public void PlayGames_CompleteGameSequences_GenerateCorrectFinalPositions()
     {
         var pgns = new[] {
-            "1. e4 c6 2. d4 d5 3. exd5 cxd5 4. Nc3 Nf6 5. Bb5+ Nc6 6. Bg5 Qa5 7. Bxf6 exf6 8. Qe2+ Be6 9. O-O-O Bd6 " + 
-            "10. g3 Rc8 11. f4 O-O 12. Nf3 Rc7 13. Nh4 h5 14. f5 Nb4 15. a3 Bxf5 16. Nxf5 Rxc3 17. Nxd6 Rxc2+ 18. Qxc2 Nxc2 19. Kxc2 g5 " + 
-            "20. a4 a6 21. Nxb7 Qb6 22. Nc5 axb5 23. Kb1 Qb8 24. Nd7 Qd6 25. Nxf8 bxa4 26. Rd3 Kxf8 27. Ra3 Qd8 28. Rxa4 Kg7 29. Ra3 Qe7 " + 
+            "1. e4 c6 2. d4 d5 3. exd5 cxd5 4. Nc3 Nf6 5. Bb5+ Nc6 6. Bg5 Qa5 7. Bxf6 exf6 8. Qe2+ Be6 9. O-O-O Bd6 " +
+            "10. g3 Rc8 11. f4 O-O 12. Nf3 Rc7 13. Nh4 h5 14. f5 Nb4 15. a3 Bxf5 16. Nxf5 Rxc3 17. Nxd6 Rxc2+ 18. Qxc2 Nxc2 19. Kxc2 g5 " +
+            "20. a4 a6 21. Nxb7 Qb6 22. Nc5 axb5 23. Kb1 Qb8 24. Nd7 Qd6 25. Nxf8 bxa4 26. Rd3 Kxf8 27. Ra3 Qd8 28. Rxa4 Kg7 29. Ra3 Qe7 " +
             "30. Ka2 g4 31. h4 Qe2 32. Rc1 f5 33. Rc5 Kf6 34. Rxd5 Qe3 35. Rxe3",
 
             "1. e4 c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 Nc6 5. Be3 Nf6 6. f3 e5 7. Nb3 b6 8. h4 Be7 9. Nc3 Bb7 " +
@@ -190,10 +41,14 @@ public class BoardTests
 
             "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 cxd4 5. cxd4 Bb4+ 6. Nc3 Nc6 7. Nf3 Nge7 8. Bd3 O-O 9. Bxh7+ Kxh7 10. Ng5+ Kg6 11. h4 Nxd4 12. Qg4 f5 13. h5+ Kh6 14. Nxe6+ g5 15. hxg6#",
 
-            "1. d4 e6 2. Bf4 d5 3. e3 c5 4. Nc3 Nc6 5. Nb5 e5 6. dxe5 a6 7. Nd6+ Bxd6 8. exd6 Be6 9. Be2 Qb6 " + 
-            "10. Rb1 Nf6 11. Bf3 Qa5+ 12. c3 Qxa2 13. Ne2 h6 14. O-O g5 15. Bg3 g4 16. Nf4 gxf3 17. Nxe6 fxg2 18. Kxg2 fxe6 19. Bh4 Qc4 " + 
-            "20. Bxf6 Qe4+ 21. f3 Qg6+ 22. Kf2 Qxf6 23. Rg1 Qh4+ 24. Kf1 Qxh2 25. Qe2 Qh3+ 26. Ke1 Qh4+ 27. Kd2 Qf6 28. f4 O-O-O 29. Rg2 Rxd6 " + 
-            "30. Rbg1 d4 31. Rg6 dxc3+ 32. Ke1 cxb2 33. Rxf6 b1=Q+ 34. Kf2 Rg8 35. Rxg8+"
+            "1. d4 e6 2. Bf4 d5 3. e3 c5 4. Nc3 Nc6 5. Nb5 e5 6. dxe5 a6 7. Nd6+ Bxd6 8. exd6 Be6 9. Be2 Qb6 " +
+            "10. Rb1 Nf6 11. Bf3 Qa5+ 12. c3 Qxa2 13. Ne2 h6 14. O-O g5 15. Bg3 g4 16. Nf4 gxf3 17. Nxe6 fxg2 18. Kxg2 fxe6 19. Bh4 Qc4 " +
+            "20. Bxf6 Qe4+ 21. f3 Qg6+ 22. Kf2 Qxf6 23. Rg1 Qh4+ 24. Kf1 Qxh2 25. Qe2 Qh3+ 26. Ke1 Qh4+ 27. Kd2 Qf6 28. f4 O-O-O 29. Rg2 Rxd6 " +
+            "30. Rbg1 d4 31. Rg6 dxc3+ 32. Ke1 cxb2 33. Rxf6 b1=Q+ 34. Kf2 Rg8 35. Rxg8+",
+
+            "1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 g6 5. Nc3 Bg7 6. Be3 Nf6 7. Bc4 O-O 8. O-O Ne5 9. Bb3 Neg4 " + 
+            "10. Bg5 h6 11. Bxf6 Nxf6 12. Qf3 e5 13. Ndb5 d6 14. Nd5 a6 15. Nbc3 Bg4 16. Qg3 Rb8 17. Nxf6+ Bxf6 18. Qxg4 b5 19. Ne2 Qc7 " + 
+            "20. Rac1 Bg5 21. f4 Qc8 22. Qxc8 Rbxc8 23. fxg5 hxg5 24. Rxf7 Rxf7 25. Rf1 Rf8"
         };
 
         var fens = new[] {
@@ -201,14 +56,14 @@ public class BoardTests
             "8/8/4K3/4N3/5k2/8/4q3/8 w - - 16 73",
             "5k2/6p1/6Pp/pb5P/8/2p1p2r/p1P5/RR2K1r1 w - - 2 72",
             "r1bq1r2/pp2n3/4N1Pk/3pPp2/1b1n2Q1/2N5/PP3PP1/R1B1K2R b KQ - 0 15",
-            "2k3R1/1p6/p1nrpR1p/2p5/5P2/4P3/4QK2/1q6 b - - 0 35"
+            "2k3R1/1p6/p1nrpR1p/2p5/5P2/4P3/4QK2/1q6 b - - 0 35",
+            "5rk1/5r2/p2p2p1/1p2p1p1/4P3/1B6/PPP1N1PP/5RK1 w - - 2 26"
         };
 
         for (var i = 0; i < pgns.Length; i++) {
             var pgn = pgns[i];
             var expectedFen = fens[i];
-            var board = new Chezzz.San.Board();
-            board.StartGame();
+            var board = new ChessBoard();
             var moves = GetMoves(pgn);
             var fen = string.Empty;
             for (var j = 0; j < moves.Length; j++) {
@@ -216,7 +71,7 @@ public class BoardTests
                 Assert.IsTrue(board.Move(move), $"Move {j + 1} ({move}) should be valid");
                 fen = board.ToFen();
             }
-            
+
             Assert.AreEqual(expectedFen, fen, $"Game {i + 1} final position does not match expected FEN");
         }
     }

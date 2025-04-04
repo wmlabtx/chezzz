@@ -67,30 +67,64 @@ public partial class MainWindow
         RequiredTimeText.Text = requiredTimeText;
     }
 
-    private void UpdateRequiredScore()
-    {
-        DescreaseScore.IsEnabled = _requiredScore.CanDescreaseValue();
-        IncreaseScore.IsEnabled = _requiredScore.CanIncreaseValue();
-        var requiredScore = _requiredScore.GetValue();
-        var requiredScoreText = requiredScore switch {
-            POSITIVE_MATE => "MAX",
-            NEGATIVE_MATE => "MIN",
-            _ => requiredScore < 0
-                ? $"-{Math.Abs(requiredScore) / 100.0:F2}"
-                : $"+{requiredScore / 100.0:F2}"
-        };
-        RequiredScoreText.Text = requiredScoreText;
-    }
-
     private void ShowMoves()
     {
         var sbSvg = new StringBuilder();
         var sbStyle = new StringBuilder();
+        var groups = _moves
+            .Values
+            .OrderByDescending(move => move.Score)
+            .GroupBy(move => move.FirstMove[..2])
+            .Select(group => group.ToArray())
+            .OrderByDescending(list => list.First().Score)
+            .ToArray();
+        foreach (var group in groups) {
+            var bestMove = group.First();
+            var bst = bestMove.FirstMove[..2];
+            var x1 = (bst[0] - 'a') * 12.5 + 6.25;
+            var y1 = ('8' - bst[1]) * 12.5 + 6.25;
+            if (!_isWhite) {
+                x1 = 100.0 - x1;
+                y1 = 100.0 - y1;
+            }
+
+            sbSvg.Append($@"<circle id='{ARROW_PREFIX}-a{bst}' cx='{x1}' cy='{y1}' r='2' style='fill:transparent; stroke:none; stroke-width:0.5; cursor:pointer; pointer-events:auto;' />");
+            foreach (var move in group) {
+                var color = GetColor(move.Score);
+                var darkenColor = DarkenColor(color, 0.75);
+
+                var src = move.FirstMove.Substring(2, 2);
+                x1 = (src[0] - 'a') * 12.5 + 6.25;
+                y1 = ('8' - src[1]) * 12.5 + 6.25;
+                if (!_isWhite) {
+                    x1 = 100.0 - x1;
+                    y1 = 100.0 - y1;
+                }
+
+                sbSvg.Append($"<circle id='{ARROW_PREFIX}-a{bst}-c{src}' cx='{x1}' cy='{y1}' r='4' style='fill:rgb({darkenColor.R},{darkenColor.G},{darkenColor.B}); stroke:rgb({color.R},{color.G},{color.B}); stroke-width:1;' />");
+                sbSvg.AppendLine($"<text id='{ARROW_PREFIX}-a{bst}-t{src}' x='{x1}' y='{y1}' text-anchor='middle' alignment-baseline='middle' style='font-size:2.5; fill:rgb({color.R},{color.G},{color.B}); font-family:Impact;'>{move.ScoreText}</text>");
+
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
+                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-c{src} {{opacity:0;transition: opacity 0.3s ease;}}");
+                sbStyle.AppendLine($"#{ARROW_PREFIX}-a{bst}-t{src} {{opacity:0;transition: opacity 0.3s ease;}}");
+            }
+        }
+
+        _svg = sbSvg.ToString();
+        _style = sbStyle.ToString();
 
         Panel.Children.Clear();
 
-        var groups = _moves
-            .Values
+        var bestMoves = _moves
+            .Where(move => move.Value.Score >= _moves[0].Score - 50)
+            .Select(move => move.Value)
+            .Take(5)
+            .ToArray();
+
+        groups = bestMoves
             .OrderByDescending(move => move.Score)
             .GroupBy(move => move.FirstMove[..2])
             .Select(group => group.ToArray())
@@ -107,22 +141,12 @@ public partial class MainWindow
 
             if (
                 _selectedIndex >= 0 && 
-                _selectedIndex < _moves.Count && 
-                bestMove.FirstMove[..2].Equals(_moves[_selectedIndex].FirstMove[..2])) {
+                _selectedIndex < bestMoves.Length && 
+                bestMove.FirstMove[..2].Equals(bestMoves[_selectedIndex].FirstMove[..2])) {
                 groupLabel.Foreground = Brushes.Yellow;
             }
 
             Panel.Children.Add(groupLabel);
-
-            var bst = bestMove.FirstMove[..2];
-            var x1 = (bst[0] - 'a') * 12.5 + 6.25;
-            var y1 = ('8' - bst[1]) * 12.5 + 6.25;
-            if (!_isWhite) {
-                x1 = 100.0 - x1;
-                y1 = 100.0 - y1;
-            }
-
-            sbSvg.Append($@"<circle id='{ARROW_PREFIX}-a{bst}' cx='{x1}' cy='{y1}' r='2' fill='transparent' stroke='none' stroke-width='0.5' cursor='pointer' />");
 
             foreach (var move in group) {
                 var color = GetColor(move.Score);
@@ -199,6 +223,8 @@ public partial class MainWindow
                 };
 
                 var moveButton = new Button {
+                    Content = move.FirstMove.Substring(2, 2),
+                    Width = 21,
                     Margin = new Thickness(1, 0, 0, 0),
                     BorderThickness = new Thickness(1),
                     BorderBrush = new SolidColorBrush(color),
@@ -210,55 +236,28 @@ public partial class MainWindow
                     ToolTip = tooltip
                 };
 
+                if (!string.IsNullOrEmpty(move.Opening)) {
+                    moveButton.Foreground = Brushes.LightGreen;
+                }
+
                 if (move.Index == _selectedIndex) {
                     moveButton.BorderThickness = new Thickness(2);
                     moveButton.BorderBrush = new SolidColorBrush(Colors.Yellow);
                     moveButton.Foreground = Brushes.Yellow;
                 }
 
-                if (_selectedMoves.Contains(move.Index)) {
-                    moveButton.Content = move.FirstMove.Substring(2, 2);
-                    moveButton.Width = 21;
-                }
-                else {
-                    moveButton.Width = 6;
-                }
-
                 moveButton.Click += async (sender, e) => {
                     var buttonSender = (Button)sender;
                     var moveSender = (Move)buttonSender.Tag;
-                    _selectedIndex = moveSender.Index;
-                    _requiredScore.SetValue(moveSender.Score);
-                    UpdateRequiredScore();
+                    _selectedIndex = moveSender.Index == _selectedIndex ? -1 : moveSender.Index;
                     ShowMoves();
                     await AddArrowPlayer();
                 };
 
                 ToolTipService.SetInitialShowDelay(moveButton, 0);
                 Panel.Children.Add(moveButton);
-
-                var src = move.FirstMove.Substring(2, 2);
-                x1 = (src[0] - 'a') * 12.5 + 6.25;
-                y1 = ('8' - src[1]) * 12.5 + 6.25;
-                if (!_isWhite) {
-                    x1 = 100.0 - x1;
-                    y1 = 100.0 - y1;
-                }
-
-                sbSvg.Append($"<circle id='{ARROW_PREFIX}-a{bst}-c{src}' cx='{x1}' cy='{y1}' r='4' style='fill:black; stroke:rgb({color.R},{color.G},{color.B}); stroke-width:1;' />");
-                sbSvg.AppendLine($"<text id='{ARROW_PREFIX}-a{bst}-t{src}' x='{x1}' y='{y1}' text-anchor='middle' alignment-baseline='middle' style='font-size:2.5; fill:rgb({color.R},{color.G},{color.B}); font-family:Impact;'>{move.ScoreText}</text>");
-
-                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
-                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
-                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
-                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
-                sbStyle.Append($"#{ARROW_PREFIX}-a{bst}-c{src} {{opacity:0;transition: opacity 0.3s ease;}}");
-                sbStyle.AppendLine($"#{ARROW_PREFIX}-a{bst}-t{src} {{opacity:0;transition: opacity 0.3s ease;}}");
             }
         }
-
-        _svg = sbSvg.ToString();
-        _style = sbStyle.ToString();
     }
 
     private string GetArrowOpponent(int index, IReadOnlyDictionary<int, Move> moves)
@@ -278,8 +277,6 @@ public partial class MainWindow
         else {
             color = Colors.Red;
         }
-        var darkColor = DarkenColor(color, 0.5);
-        var scoreText = diff == 0 ? "BEST" : $"{diff / 100.0:F2}";
 
         var src = move.FirstMove[..2];
         var dst = move.FirstMove[2..];
@@ -314,39 +311,39 @@ public partial class MainWindow
 
     private async Task AddArrowPlayer()
     {
-        if (_selectedIndex < 0 || _selectedIndex >= _moves.Count) {
-            return;
+        var playerArrow = string.Empty;
+        if (_selectedIndex >= 0 && _selectedIndex < _moves.Count) {
+            var move = _moves[_selectedIndex];
+            var src = move.FirstMove[..2];
+            var dst = move.FirstMove[2..];
+            var x1 = (src[0] - 'a') * 12.5 + 6.25;
+            var x2 = (dst[0] - 'a') * 12.5 + 6.25;
+            var y1 = ('8' - src[1]) * 12.5 + 6.25;
+            var y2 = ('8' - dst[1]) * 12.5 + 6.25;
+            if (!_isWhite) {
+                x1 = 100.0 - x1;
+                x2 = 100.0 - x2;
+                y1 = 100.0 - y1;
+                y2 = 100.0 - y2;
+            }
+
+            var dx = x2 - x1;
+            var dy = y1 - y2;
+            var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2).ToString(CultureInfo.InvariantCulture);
+            var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
+            var sx1 = Math.Round(x1, 2).ToString(CultureInfo.InvariantCulture);
+            var sy1 = Math.Round(y1, 2).ToString(CultureInfo.InvariantCulture);
+            const double headRadius = 1.5;
+            var point1X = Math.Round(x1 + headRadius, 2).ToString(CultureInfo.InvariantCulture);
+            var point2Y = Math.Round(y1 - length + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+            var point3X = Math.Round(x1 + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+            var point4Y = Math.Round(y1 - length, 2).ToString(CultureInfo.InvariantCulture);
+            var point5X = Math.Round(x1 - headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
+            var point6X = Math.Round(x1 - headRadius, 2).ToString(CultureInfo.InvariantCulture);
+            var points = $"{point1X},{sy1} {point1X},{point2Y} {point3X},{point2Y} {sx1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{sy1}";
+            playerArrow = $"<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb(255,255,0); opacity:{OPACITY};' />";
         }
 
-        var move = _moves[_selectedIndex];
-        var src = move.FirstMove[..2];
-        var dst = move.FirstMove[2..];
-        var x1 = (src[0] - 'a') * 12.5 + 6.25;
-        var x2 = (dst[0] - 'a') * 12.5 + 6.25;
-        var y1 = ('8' - src[1]) * 12.5 + 6.25;
-        var y2 = ('8' - dst[1]) * 12.5 + 6.25;
-        if (!_isWhite) {
-            x1 = 100.0 - x1;
-            x2 = 100.0 - x2;
-            y1 = 100.0 - y1;
-            y2 = 100.0 - y2;
-        }
-
-        var dx = x2 - x1;
-        var dy = y1 - y2;
-        var angle = Math.Round(Math.Atan2(dx, dy) * (180.0 / Math.PI), 2).ToString(CultureInfo.InvariantCulture);
-        var length = Math.Round(Math.Sqrt(dx * dx + dy * dy), 2);
-        var sx1 = Math.Round(x1, 2).ToString(CultureInfo.InvariantCulture);
-        var sy1 = Math.Round(y1, 2).ToString(CultureInfo.InvariantCulture);
-        const double headRadius = 1.5;
-        var point1X = Math.Round(x1 + headRadius, 2).ToString(CultureInfo.InvariantCulture);
-        var point2Y = Math.Round(y1 - length + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
-        var point3X = Math.Round(x1 + headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
-        var point4Y = Math.Round(y1 - length, 2).ToString(CultureInfo.InvariantCulture);
-        var point5X = Math.Round(x1 - headRadius * 2, 2).ToString(CultureInfo.InvariantCulture);
-        var point6X = Math.Round(x1 - headRadius, 2).ToString(CultureInfo.InvariantCulture);
-        var points = $"{point1X},{sy1} {point1X},{point2Y} {point3X},{point2Y} {sx1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{sy1}";
-        var playerArrow = $"<polygon transform='rotate({angle} {sx1} {sy1})' points='{points}' style='fill:rgb(255,255,0); opacity:{OPACITY};' />";
         var layer = $"<svg viewBox='0 0 100 100'>{playerArrow}{_opponentArrow}{_svg}</svg><style>{_style}</style>";
         var script = $@"
 (function(){{
@@ -367,11 +364,15 @@ public partial class MainWindow
         if(!div){{
             var div = document.createElement('div');
             div.setAttribute('id', '{ARROW_PREFIX}');
-            div.setAttribute('style', 'position:relative; z-index:9;');
+            div.setAttribute('style', 'position:relative; pointer-events:none; z-index:9;');
             chessBoard.appendChild(div);
         }}
         div.innerHTML = `{layer}`;
     }}
+    window._arrowClickHandler = function() {{
+        removeArrow();
+        window._disableArrowObserver = true;
+    }};
     setTimeout(function(){{
         window._disableArrowObserver = false;
         window._chessBoardObserver = new MutationObserver(function(mutations){{

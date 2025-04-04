@@ -7,28 +7,15 @@ public partial class MainWindow
     [GeneratedRegex(@"<wc-chess-board[^>]*\bclass\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase)]
     private static partial Regex ChessBoardRegex();
 
-    [GeneratedRegex(@"<!--/Effects-->(?<block>[\s\S]*?)<!--/Pieces-->", RegexOptions.IgnoreCase)]
-    private static partial Regex BlockRegex();
-
-    [GeneratedRegex(@"<div[^>]*\bclass\s*=\s*""(piece[^""]*)""[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
-    private static partial Regex DivRegex();
-
     [GeneratedRegex(@"<div\s+class=""cg-wrap\s+orientation-(?<orientation>\w+)\s+manipulable""><cg-container\s+style=""width:\s*(?<width>\d+)px;\s*height:\s*(?<height>\d+)px;"">", RegexOptions.IgnoreCase, "en-US")]
     private static partial Regex OrientationRegex();
 
-    [GeneratedRegex(@"<cg-board>(?<content>[\s\S]*?)<\/cg-board>", RegexOptions.IgnoreCase, "en-US")]
-    private static partial Regex CgBoardRegex();
-
-    [GeneratedRegex(@"<piece\s+class\s*=\s*""(?<CCC>\w+)\s+(?<FFF>\w+)""\s+style\s*=\s*""transform:\s*translate\(\s*(?<XXX>\d+)px\s*,\s*(?<YYY>\d+)px\s*\);?""\s*><\/piece>", RegexOptions.IgnoreCase, "en-US")]
-    private static partial Regex PieceRegex();
-
-    private static bool ProcessSanMoves(IReadOnlyList<string> sanmoves, out string previousFen, out string previousMove, out string currentFen)
+    private static bool ProcessSanMoves(IReadOnlyList<string> sanmoves, out Chess.ChessBoard sanBoard, out string previousFen, out string previousMove, out string currentFen)
     {
         previousFen = string.Empty;
         previousMove = string.Empty;
         currentFen = string.Empty;
-        var sanBoard = new San.Board();
-        sanBoard.StartGame();
+        sanBoard = new Chess.ChessBoard();
 
         for (var i = 0; i < sanmoves.Count; i++) {
             if (!sanBoard.Move(sanmoves[i])) {
@@ -41,21 +28,23 @@ public partial class MainWindow
 
             if (i == sanmoves.Count - 1) {
                 currentFen = sanBoard.ToFen();
-                previousMove = sanBoard.GetLastMove();
+                var executedMoves = sanBoard.ExecutedMoves.ToArray();
+                var lastMove = executedMoves[^1];
+                previousMove = $"{lastMove.OriginalPosition}{lastMove.NewPosition}";
             }
         }
 
         return true;
     }
 
-    private void GetFenFromChess(string decodedHtml, out string error, out San.Board board, out string previousFen, out string previousMove, out string currentFen)
+    private void GetFenFromChess(string decodedHtml, out string error, out Chess.ChessBoard board, out string previousFen, out string previousMove, out string currentFen)
     {
-        board = new San.Board();
-
+        board = new Chess.ChessBoard();
         error = string.Empty;
         previousFen = string.Empty;
         previousMove = string.Empty;
         currentFen = string.Empty;
+        _isWhite = true;
         _isWhite = true;
         var match = ChessBoardRegex().Match(decodedHtml);
         if (match.Success) {
@@ -69,52 +58,6 @@ public partial class MainWindow
             return;
         }
 
-        var blockMatch = BlockRegex().Match(decodedHtml);
-        if (!blockMatch.Success) {
-            error = "The block between <!--/Effects--> and <!--/Pieces--> not found";
-            return;
-        }
-
-        var blockContent = blockMatch.Groups["block"].Value;
-        var matches = DivRegex().Matches(blockContent);
-
-        if (matches.Count == 0) {
-            error = "<div> not found";
-            return;
-        }
-
-        foreach (Match m in matches) {
-            var classValue = m.Groups[1].Value;
-            var pars = classValue.Split(' ');
-            if (pars.Length != 3) {
-                _status?.Report("incorrect <div>");
-                continue;
-            }
-
-            var color = '.';
-            var piece = '.';
-            var square = "00";
-            foreach (var par in pars) {
-                if (par.Length == 2) {
-                    color = par[0];
-                    piece = par[1];
-                }
-                else if (par.StartsWith("square-")) {
-                    square = par.Substring(7, 2);
-                }
-            }
-
-            var rankNumber = int.Parse(square[..1]);
-            var col = rankNumber - 1;
-
-            rankNumber = int.Parse(square.Substring(1, 1));
-            var row = 8 - rankNumber;
-
-            board.PutPiece(row, col, new San.Piece(color, piece));
-        }
-
-        currentFen = board.ToFen(_isWhite);
-
         var sanmoves = new List<string>();
 
         // <span class="node-highlight-content offset-for-annotation-icon">d4 </span></div>
@@ -123,7 +66,7 @@ public partial class MainWindow
 
         const string pattern = @"<span class=""node-highlight-content offset-for-annotation-icon(?:\s+selected)?"">(?:<span.*?data-figurine=""([^""]+)""></span>)?\s*([^<]+)</span>";
 
-        matches = Regex.Matches(decodedHtml, pattern);
+        var matches = Regex.Matches(decodedHtml, pattern);
         foreach (var m in matches.Cast<Match>()) {
             var isSelected = m.Value.Contains("selected");
             var moveText = m.Groups[2].Value.Trim();
@@ -136,16 +79,15 @@ public partial class MainWindow
         }
 
         if (sanmoves.Count > 0) {
-            if (!ProcessSanMoves(sanmoves, out previousFen, out previousMove, out currentFen)) {
+            if (!ProcessSanMoves(sanmoves, out board, out previousFen, out previousMove, out currentFen)) {
                 error = "Error processing moves";
             }
         }
     }
 
-    private void GetFenFromLiChess(string decodedHtml, out string error, out San.Board board, out string previousFen, out string previousMove, out string currentFen)
+    private void GetFenFromLiChess(string decodedHtml, out string error, out Chess.ChessBoard board, out string previousFen, out string previousMove, out string currentFen)
     {
-        board = new San.Board();
-
+        board = new Chess.ChessBoard();
         error = string.Empty;
         previousFen = string.Empty;
         previousMove = string.Empty;
@@ -173,58 +115,6 @@ public partial class MainWindow
             }
         }
 
-        var strwidth = m.Groups["width"].Value;
-        var width = int.Parse(strwidth);
-        var strheight = m.Groups["height"].Value;
-        var height = int.Parse(strheight);
-        var squareX = width / 8.0;
-        var squareY = height / 8.0;
-
-        regex = CgBoardRegex();
-        var matches = regex.Matches(decodedHtml);
-        if (matches.Count == 0) {
-            error = "Block between <cg-board> and </cg-board> not found";
-            return;
-        }
-
-        var blockContent = matches[0].Groups["content"].Value;
-        regex = PieceRegex();
-        matches = regex.Matches(blockContent);
-        if (matches.Count == 0) {
-            error = "<piece> not found";
-            return;
-        }
-
-        foreach (Match match in matches) {
-            // <piece class="white pawn" style="transform: translate(460px, 552px);"></piece>
-            var rawColor = match.Groups["CCC"].Value; // 
-            var rawPiece = match.Groups["FFF"].Value;
-            var rawX = match.Groups["XXX"].Value;
-            var rawY = match.Groups["YYY"].Value;
-
-            var color = rawColor[0];
-            var piece = rawPiece switch {
-                "pawn" => 'p',
-                "knight" => 'n',
-                "bishop" => 'b',
-                "rook" => 'r',
-                "queen" => 'q',
-                "king" => 'k',
-                _ => '.'
-            };
-
-            var col = (int)Math.Round(int.Parse(rawX) / squareX);
-            var row = (int)Math.Round(int.Parse(rawY) / squareY);
-            if (!_isWhite) {
-                col = 7 - col;
-                row = 7 - row;
-            }
-
-            board.PutPiece(row, col, new San.Piece(color, piece));
-        }
-
-        currentFen = board.ToFen(_isWhite);
-
         var sanmoves = new List<string>();
         const string pattern = @"<kwdb[^>]*>(.*?)<\/kwdb>";
         var simpleMoveListMatch = Regex.Matches(decodedHtml, pattern);
@@ -236,45 +126,35 @@ public partial class MainWindow
         }
 
         if (sanmoves.Count > 0) {
-            if (!ProcessSanMoves(sanmoves, out previousFen, out previousMove, out currentFen)) {
+            if (!ProcessSanMoves(sanmoves, out board, out previousFen, out previousMove, out currentFen)) {
                 error = "Error processing moves";
             }
         }
     }
 
-    private static string GetPiece(string move, bool white, San.Board board)
+    private static string GetPiece(string move, Chess.ChessBoard board)
     {
-        var col = move[0] - 'a';
-        var row = '8' - move[1];
-        var piece = board.GetPiece(row, col);
+        var piece = board[move[..2]];
         if (piece == null) {
             return string.Empty;
         }
 
-        var f = piece.Type.ToString().ToUpper();
-        string pieceUnicodeChar;
-        if (white) {
-            pieceUnicodeChar = f switch {
-                "P" => "",
-                "N" => "\u2658",
-                "B" => "\u2657",
-                "R" => "\u2656",
-                "Q" => "\u2655",
-                "K" => "\u2654",
-                _ => f
+        var f = piece.ToFenChar();
+        var pieceUnicodeChar = f switch {
+            'P' => "",
+            'N' => "\u2658",
+            'B' => "\u2657",
+            'R' => "\u2656",
+            'Q' => "\u2655",
+            'K' => "\u2654",
+            'p' => "",
+            'n' => "\u265E",
+            'b' => "\u265D",
+            'r' => "\u265C",
+            'q' => "\u265B",
+            'k' => "\u265A",
+            _ => f.ToString()
             };
-        }
-        else {
-            pieceUnicodeChar = f switch {
-                "P" => "",
-                "N" => "\u265E",
-                "B" => "\u265D",
-                "R" => "\u265C",
-                "Q" => "\u265B",
-                "K" => "\u265A",
-                _ => f
-            };
-        }
 
         return pieceUnicodeChar;
     }
