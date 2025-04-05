@@ -1,6 +1,6 @@
 # Introduction
 
-![0 1 8-3](https://github.com/user-attachments/assets/6c8d2ade-8737-4872-9cf1-d09f405d59a8)
+![header-0 2 0](https://github.com/user-attachments/assets/45aaec7e-090d-4903-b562-9824738e471c)
 
 # How it works
 
