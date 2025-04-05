@@ -136,6 +136,34 @@ To avoid being annoyed by ridiculous opening moves, I compiled a book of opening
 
 ![Pasted image 20250303081904](https://github.com/user-attachments/assets/708552f5-76c8-4f49-83be-cfc4df355cba)
 
+However, everything there didn't look so simple. A debut book is not about moves, but positions:
+
+```
+rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR,English Opening
+bqkbnr/ppp1pppp/8/3p4/2P5/5N2/PP1PPPPP/RNBQKB1R,Reti Opening
+```
+
+To understand that this move leads to the opening position, it must be made. Fortunately, Stockfish can make moves virtually: "**position fen moves move**" and "**d**". We take the current position, make a move, get a new position, and then we look for it in the opening book:
+
+```C#
+await inputWriter[0].WriteLineAsync($"position fen {currentFen} moves {move.FirstMove}");
+await inputWriter[0].FlushAsync();
+await inputWriter[0].WriteLineAsync("d");
+await inputWriter[0].FlushAsync();
+var newFen = string.Empty;
+while (await outputReader[0].ReadLineAsync() is { } rawline) {
+	if (!rawline.StartsWith("Fen:")) {        
+		continue;    
+	}    
+	newFen = rawline[5..].Trim();    
+	break;
+}
+```
+
+In the current version, the opening moves are highlighted in green:
+
+![image](https://github.com/user-attachments/assets/ba0422b8-08ba-4142-814f-718d3b2b15b5)
+
 # Why only chess.com?
 
 At this point, I bragged on one of the platforms. One of the commenters mentioned that chess.com already has a hint option when playing with a bot. And real pros are on lichess.org. There's no such option there. I had to figure out how the board is coded there.
@@ -307,15 +335,38 @@ for (var i = 0; i < 2; i++) {
 
 In the current version, this feature is simplified, and the opponent's last move is shown with just a single colored arrow, without numerical markers.
 
+![image](https://github.com/user-attachments/assets/c642f2cd-8517-496f-822b-a77fcb87c6a7)
+
+# Once again - I don't need a chess bot!
+
+So, a bot that tells me how to move. The bot might win against everyone with my hand, but those wouldn't be my victories. I want to learn to play chess on my own. I just need an advisor to help me avoid silly blunders. Then the idea came - what if, when I hover the mouse over the piece I intend to play, the bad moves are highlighted?
+
+Technically, it's done like this: over each piece that can be played, we create an invisible circle, and when you hover the mouse over it, all the moves associated with that piece become visible.
+
+```xml
+<circle id='chezzz-ae8' cx='43.75' cy='93.75' r='2' ... />
+<text id='chezzz-ae8-tg8' x='18.75' y='93.75' ... >-0.60</text>
+...
+<style>
+#chezzz-ae8:hover ~ #chezzz-ae8-tg8 {opacity:0.7;display:block!important;}
+```
+
+I had to struggle with lichess.org; an invisible circle on the piece was preventing me from grabbing it with the mouse, but I managed to solve the problem using the CSS style pointer-events.
+
+Now the hint arrows don't interfere with playing independently.
+
+![demo-0 2 0](https://github.com/user-attachments/assets/d45f36e6-87d7-4a33-abe8-78d9be0335f9)
+
 # Conclusion
 
-I made this thing (and I'm sharing it for free) for fun. I remind you that cheating is unfair and dishonest towards your opponent. On the other hand, this advisor allows you to "level" the strength of the game if the opponents are in different weight categories. The games become interesting. If the opponent has a rating of, for example, 1800, setting the strength to "+0.50" will allow you to play at a 1900-2000 rating. Of course, this should only be done with the permission and approval of the opponent. For training purposes, for example.
+I made this thing (and I'm sharing it for free) for fun. I remind you that cheating is unfair and dishonest towards your opponent. Of course, using any advisors should only be done with the permission and approval of the opponent. For training purposes, for example.
 
 # Links
 
 * Stockfish engine download: [(https://stockfishchess.org/download/)](https://stockfishchess.org/download/)
 * UCI protocol: [https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands)
 * FEN notation: [https://www.chess.com/terms/fen-chess](https://www.chess.com/terms/fen-chess)
+* Used .NET chess library: [https://github.com/Geras1mleo/Chess](https://github.com/Geras1mleo/Chess)
 
 # Like the project?
 
