@@ -2,9 +2,9 @@
 
 ![header-0 2 0](https://github.com/user-attachments/assets/45aaec7e-090d-4903-b562-9824738e471c)
 
-# How it works
+# What is it
 
-This is a WPF application with a single window, running Stockfish as a child process.
+It is a small Windows application written on csharp and wpf that requires [Stockfish](https://stockfishchess.org/download/) to to assist in playing on chess.com and lichess.org. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github](https://github.com/wmlabtx/chezzz). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process. You could consider this program a cheat, and that's partly true. But I would like to focus on its technical details.
 
 # Usage
 
@@ -14,7 +14,7 @@ The advisor supports both popular chess websites. You can switch between them at
 
 ![0124-8](https://github.com/user-attachments/assets/b76ccd3e-774b-4207-8470-babc7be6a4b0)
 
-You can play either anonymously or in your account. All modes are supported — playing against people, bots, solving puzzles, and studies.
+You can play either anonymously or in your account. You can play against people and bots.
 
 # Configuring
 
@@ -29,13 +29,6 @@ you can use relative path
 ```xml
 <add key="StockFishPath" value="..\stockfish\stockfish-windows-x86-64-avx2.exe" />
 ```
-
-# What is this even about?
-
-![header-0 1 8](https://github.com/user-attachments/assets/86752483-01bf-44fd-891a-d67447c81a14)
-
-This is a two-month story about the creation of a chess advisor to assist in playing on chess.com and lichess.org. It is a small Windows application written on csharp and wpf that requires [Stockfish](https://stockfishchess.org/download/) to function. You need to download it and place it in any folder. The application was developed for personal enjoyment in my free time. It is free to use, and the source code is available on [github](https://github.com/wmlabtx/chezzz). Feel free to use it, modify it, or incorporate ideas into your own projects. I would appreciate it if you could credit me in the process. You could consider this program a cheat, and that's partly true. But I would like to focus on its technical details.
-
 # How It All Began
 
 I really love playing chess. I constantly play ten-minute games on chess.com. But I have a problem — a tunnel vision. I see one move and fixate on it. Because of this, I miss a lot of opportunities and overlook pieces. My rating never rises above 1500. If only I had an advisor nearby who would stop me when I make a blunder...
@@ -47,6 +40,7 @@ On Christmas Eve, we weren't working, and I started considering how to integrate
 For a while, I considered options with machine vision. But on chess.com, there are dozens of board and piece options in the settings. Plus, the size and position of the board can vary. Then I started thinking about connecting to the browser. But there are many browsers, plus the hassle of reading another process... A browser add-on? I have no experience writing them. The solution came to me — I would embed the browser in my application. Then there would be no problem reading the current web page.
 
 The final version looks like this — a simple WPF application with a single window and a web control, launching StockFish as a child process and interacting with it through console input-output streams. In five minutes, I create a new WPF project in Visual Studio, add a WebBrowser as the main control, set its homepage to chess.com, launch it... and JavaScript errors, nothing works.
+
 # The built-in browser
 
 The ancient WebBrowser WPF control still relies on Internet Explorer libraries, which are incompatible with modern web pages. Something newer is needed — Chromium or Edge (which is also Chromium, but with a different shell). There are libraries available for both options. My main browser is Microsoft Edge, so I install the component from Microsoft itself — Microsoft.Web.WebView2, via NuGet.
@@ -54,16 +48,19 @@ The ancient WebBrowser WPF control still relies on Internet Explorer libraries, 
 ![Pasted image 20250302175652](https://github.com/user-attachments/assets/80cd9583-a2d9-4d35-be06-f1ff530f3a8c)
 
 Now everything is working. I even logged into my account, closed the app, launched it again — and I'm still logged into my account. So cookies and sessions are supported. Wonderful. However, working with the DOM like before won't be possible. In WebView2, you can't just access the HtmlDocument and DOM like in the good old days. The world has changed, pages are dynamic, so we view the content differently.
+
 ```C#
 const string script = "document.documentElement.outerHTML";
 var result = await WebBrowser.CoreWebView2.ExecuteScriptAsync(script);
 var decodedHtml = Regex.Unescape(result.Trim('"'));
 ```
+
 It remains to figure out how to extract the board and pieces from the HTML page.
 
 # Chess board parsing
 
 In the current implementation, the chess.com board is encoded with a set of divs.
+
 ```html
 <div class="piece bb square-55" style=""></div>
 <div class="piece square-78 bk" style=""></div>
@@ -74,10 +71,13 @@ In the current implementation, the chess.com board is encoded with a set of divs
 <div class="piece wq square-41" style=""></div>
 <div class="element-pool" style=""></div>
 ```
+
 The class of a piece always starts with "piece", the first character of the two-letter class is always "w" or "b" (white or black piece), the second is the piece itself ("r" for rook, "p" for pawn, "q" for queen, etc.), and "square-XY" indicates the square. 11 is a1, 88 is h8. However, the board can be flipped if we are playing as black. This is determined by another element, slightly earlier.
+
 ```html
 <wc-chess-board class="board flipped">
 ```
+
 The presence of a `flipped` class suggests that the board is turned over. You can extract the positions of all pieces with a simple regular expression. It turned out to be more difficult to convey them to Stockfish.
 
 # Stockfish interaction
@@ -107,6 +107,7 @@ Is the task solved? No.
 By making only the best moves, I will win against everyone, including the world champion, and will justly receive an account ban. That's not what I need at all. I need an advisor who will protect me from foolish moves and won't suggest playing much stronger or weaker than the opponent. 
 
 I had to delve into the UCI commands. Stockfish indeed has a setting for adjusting playing strength (either by levels 1-20 or by Elo rating (1320-3190)), but in the current version, it has a rather straightforward algorithm (it's easily readable in the source code), which sometimes chooses random, absurd, nonsensical moves. For those interested, here is the beginning of this function.
+
 ```C
 Skill(int skill_level, int uci_elo) {
 	if (uci_elo) {
@@ -118,6 +119,7 @@ Skill(int skill_level, int uci_elo) {
     }
     ...
 ```
+
 To begin with, I discovered the setting "**set option name MultiPV value N**". It instructs Stockfish to return not only the best move but also the top N moves, sorted in descending order. Additionally, for each move, you can return the WDL ("win-draw-loss") statistics "**setoption name UCI_ShowWDL value true**". These are three numbers that add up to one hundred, for example, "30-60-10", which allows you to roughly calculate the probability of winning or losing. Shall we try the top three moves to start?
 
 ![header-github-2](https://github.com/user-attachments/assets/891f0a26-4678-4437-8727-8fa51f2fb15f)
@@ -151,6 +153,7 @@ The logic remains the same in other respects. You can choose between the sites a
 # I need an advisor, not a chess bot
 
 It seems everything is fine, but it didn't turn out the way I intended. I decided to make the moves myself, but I need a quick answer on whether the move is a blunder and simply losing. Searching for my move in the multicolored stripes is exhausting. Therefore, I decided to group the moves by pieces.
+
 ```C#
 var groups = _moves
 	.Values
@@ -160,6 +163,7 @@ var groups = _moves
 	.OrderByDescending(list => list.First().Score)
 	.ToArray();
 ```
+
 ![Pasted image 20250303113537](https://github.com/user-attachments/assets/42460e43-036c-4b5f-890e-bd135f21f71d)
 
 Looking for a move this way is faster, but the design is overloaded; there are too many repeating symbols. So I decided to discard them. After all, the first half of the move for the piece is the same.
@@ -181,6 +185,7 @@ It's just that reading moves on strips and translating "h5f7" onto the board is 
 Initially, I thought it would be easy to place a Canvas in front of the WebBrowser element, get the board's offset relative to the top-left corner using a JS function, and then draw anything on the board, be it lines or text. But it didn't work. WebView2 uses hardware acceleration and DirectComposition to render its content, which creates complexities when integrating with the traditional WPF rendering system. I only managed to overlay the control with another window, without a border and title, and track all the movements of the main window... Quite a nightmare, and it all worked unstably.
 
 Then I decided to implement my elements on the board just like chess.com does. That is, we draw an arrow as a polygon and insert it directly into the page code using JS.
+
 ```C#
 var x1 = (src[0] - 'a') * 12.5 + 6.25;
 var x2 = (dst[0] - 'a') * 12.5 + 6.25;
@@ -206,26 +211,40 @@ var point6X = x1 - headRadius;
 var points = $"{point1X},{y1} {point1X},{point2Y} {point3X},{point2Y} {x1},{point4Y} {point5X},{point2Y} {point6X},{point2Y} {point6X},{y1}";
 var svgElement = $"<svg viewBox='0 0 100 100'><polygon transform='rotate({angle} {x1} {y1})' points='{points}' style='fill: rgb(255, 255, 0); opacity: 0.7;' /></svg>";
 ```
+
 It turned out quite nicely.
 
 ![0 1 2-6](https://github.com/user-attachments/assets/b846899f-9784-4875-93cc-c9c580900d12)
 
 There is one drawback — the arrow doesn't disappear on its own if the opponent makes a move. A mechanism is needed that automatically removes the arrow if there are changes on the board. For example, a MutationObserver. We add the arrow, enable the MutationObserver. It triggers (for instance, if we or the opponent makes a move) — the arrow is removed. In fact, the arrow disappears already during the move, as picking up a piece with the mouse is a change in the DOM.
-```js
-window._chessBoardObserver = new MutationObserver(function(mutations){{
-  if(window._disableArrowObserver){{
-    return;
-  }}
-  mutations.forEach(function(mutation){{
-    if(mutation.type === 'childList' || mutation.type === 'attributes'){{
-      removeArrow();
-    }}
-  }});
-}});
-```
-# Unexpected pitfall
 
- What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
+```js
+setTimeout(function(){
+    window._disableArrowObserver = false;
+    window._chessBoardObserver = new MutationObserver(function(mutations){{
+        if(window._disableArrowObserver){
+	    return;
+        }
+        mutations.forEach(function(mutation){
+	    if(mutation.type === 'childList' || mutation.type === 'attributes'){
+	        removeArrow();
+	        window._disableArrowObserver = true;
+	    }
+       });
+    });
+    if(chessBoard){
+        window._chessBoardObserver.observe(chessBoard, {
+	    childList: true,
+	    attributes: true,
+	    subtree: true
+        });
+    }
+}, 0);
+```
+
+# A "little" problem
+
+What is bad, however, is that the FEN position is inaccurate in the final part, which I always have as "**KQkq - 0 1**". It's unclear whether there's an *en passant* pawn, whether the right to castle has been lost, how many moves have been made without pawn movements... without all this information, Stockfish will provide incorrect analysis in a certain percentage of positions. I didn't even anticipate how complex this minor task would turn out to be.
 
 Initially, I tried to find the FEN of the current position in the chess.com page's code. It is indeed possible to obtain it by making a web request... but only when playing against a bot. When playing against a human, this option is unavailable. Most likely, this is intentional to make it difficult for third-party applications to analyze the position.
 
@@ -253,7 +272,7 @@ By the way, FEN in the status bar can be highlighted with the mouse and copied. 
 
 "**kq - 2 12**" here means that only black player can perform both their castlings ("kq"), there are no *en passant* captures ("-"), two half-moves have been made without pawn movements, and 12 full moves have passed since the start of the game. Now the Stockfish position analysis is 100% accurate.
 
-![0 1 1-8-p](https://github.com/user-attachments/assets/592371b3-479a-4212-804e-342537be82cb)
+A little later, users began to complain that there were errors in some positions. Tests revealed that my truncated version of the library did not account for nuances. For example, it considered a move with a pinned piece to be permissible. And I realized, but I don't have the strength for a full chess engine. So I started using the [Geras1mleo](https://github.com/Geras1mleo/Chess) library as is, via NuGet. Unfortunately, it doesn't support manual piece placement, so I abandoned board parsing and switched to parsing move history.
 
 Everything looks good, but I was asked in the comments to add one more function.
 
@@ -285,6 +304,8 @@ for (var i = 0; i < 2; i++) {
     stockfish[i].Start();
     ...
 ```
+
+In the current version, this feature is simplified, and the opponent's last move is shown with just a single colored arrow, without numerical markers.
 
 # Conclusion
 
