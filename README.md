@@ -21,11 +21,14 @@ You can play either anonymously or in your account. All modes are supported — 
 The advisor itself is a portable application. It can be downloaded from **Releases** and unpacked into any folder. However, it requires Stockfish to work. Stockfish is free; download it from [here](https://stockfishchess.org/download/), place it in any folder (you can put it directly in the advisor's folder), and specify the full path to it in the **App.config** file
 
 ```xml
-<appSettings>
-  <add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
-</appSettings>
+<add key="StockFishPath" value="D:\Users\Murad\StockFish\stockfish-windows-x86-64-avx2.exe" />
 ```
 
+you can use relative path
+
+```xml
+<add key="StockFishPath" value="..\stockfish\stockfish-windows-x86-64-avx2.exe" />
+```
 
 # What is this even about?
 
