@@ -14,13 +14,14 @@
             <Setter Property="BorderBrush" Value="LightGray"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="LightGray"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RepeatButton">
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="2">
+                                CornerRadius="20">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
@@ -79,13 +80,16 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
-
             <StatusBarItem Grid.Column="0">
+                <RepeatButton Name="Strategy" Width="20" Height="20" Style="{StaticResource ArrowButtonStyle}" Click="Strategy_OnClick" Content="W" />
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="1">
                 <Label BorderThickness="1" ToolTip="Required time">
                     <Label.BorderBrush>
                         <SolidColorBrush Color="DimGray"/>
@@ -95,7 +99,7 @@
                     </Grid>
                 </Label>
             </StatusBarItem>
-            <StatusBarItem Grid.Column="1">
+            <StatusBarItem Grid.Column="2">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -117,7 +121,7 @@
                     </RepeatButton>
                 </Grid>
             </StatusBarItem>
-            <StatusBarItem Grid.Column="2">
+            <StatusBarItem Grid.Column="4">
                 <WrapPanel Name="Panel" DockPanel.Dock="Bottom">
                     <Label Content="Pick the move time and click 'Advice' or press F1 during you move" Foreground="White"></Label>
                 </WrapPanel>

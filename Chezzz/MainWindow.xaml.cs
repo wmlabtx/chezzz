@@ -17,7 +17,7 @@ public partial class MainWindow
     private bool _isWhite;
     private string _chessBoardTag;
 
-    private readonly SortedList<int, Move> _moves = new();
+    private readonly SortedList<int, Move> _moves = [];
     private int _selectedIndex;
 
     private string _svg;
@@ -27,8 +27,9 @@ public partial class MainWindow
     private const string OPACITY = "0.7";
 
     private readonly IntSetting _requiredTime;
+    private char _strategy = 'w';
 
-    private readonly SortedDictionary<string, string> _openings = new();
+    private readonly SortedDictionary<string, string> _openings = [];
 
     private const string ARROW_PREFIX = "chezzz";
 
@@ -40,9 +41,14 @@ public partial class MainWindow
 
         _requiredTime = new IntSetting(
             nameof(Settings.Default.RequiredTime), 
-            new[] {
+            [
                 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
-            });
+            ]);
+
+        _strategy = Settings.Default.Strategy[0];
+        if (_strategy != 'w' && _strategy != 'd' && _strategy != 'l') {
+            _strategy = 'w';
+        }
 
         _status = new Progress<string>(message => Status.Text = message);
         _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
@@ -100,6 +106,11 @@ public partial class MainWindow
     private void IncreaseTime_OnClick(object sender, RoutedEventArgs e)
     {
         ChangeRequiredTime(+1);
+    }
+
+    private void Strategy_OnClick(object sender, RoutedEventArgs e)
+    {
+        ChangeStrategy();
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

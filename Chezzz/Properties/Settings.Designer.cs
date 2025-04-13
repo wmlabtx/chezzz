@@ -34,5 +34,17 @@ namespace Chezzz.Properties {
                 this["RequiredTime"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("w")]
+        public string Strategy {
+            get {
+                return ((string)(this["Strategy"]));
+            }
+            set {
+                this["Strategy"] = value;
+            }
+        }
     }
 }

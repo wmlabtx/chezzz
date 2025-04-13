@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Chess;
+using System.Globalization;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -67,6 +68,21 @@ public partial class MainWindow
         RequiredTimeText.Text = requiredTimeText;
     }
 
+    private void UpdateStrategy()
+    {
+        var text = char.ToUpper(_strategy).ToString();
+        var tooltip = _strategy switch {
+            'w' => "A strategy to win",
+            'd' => "A strategy to draw",
+            'l' => "A strategy to lose",
+            _ => "A strategy to win"
+        };
+
+        Strategy.Content = text;
+        Strategy.ToolTip = tooltip;
+        ToolTipService.SetInitialShowDelay(Strategy, 0);
+    }
+
     private void ShowMoves()
     {
         var sbSvg = new StringBuilder();
@@ -118,18 +134,49 @@ public partial class MainWindow
 
         Panel.Children.Clear();
 
-        var bestMoves = _moves
-            .Where(move => move.Value.Score >= _moves[0].Score - 50)
-            .Select(move => move.Value)
-            .Take(5)
-            .ToArray();
+        Move[]? bestMoves;
+        switch (_strategy) {
+            case 'w':
+                bestMoves = [.. _moves
+                    .Select(move => move.Value)
+                    .Take(5)];
+                break;
+            case 'd':
+                var scores = new Tuple<Move, int>[_moves.Count];
+                for (var i = 0; i < _moves.Count; i++) {
+                    var move = _moves[i];
+                    scores[i] = new Tuple<Move, int>(move, move.Score >= 0 ? move.Score : -move.Score * 2);
+                }
+                Array.Sort(scores, (x, y) => x.Item2.CompareTo(y.Item2));
+                bestMoves = [.. scores
+                    .Take(5)
+                    .Select(e => e.Item1)
+                    .OrderByDescending(move => move.Score)];
+                break;
+            case 'l':
+                scores = new Tuple<Move, int>[_moves.Count];
+                for (var i = 0; i < _moves.Count; i++) {
+                    var move = _moves[i];
+                    scores[i] = new Tuple<Move, int>(move, move.Score >= 0 ? move.Score * 2 : -move.Score);
+                }
+                Array.Sort(scores, (x, y) => x.Item2.CompareTo(y.Item2));
+                bestMoves = [.. scores
+                    .Take(5)
+                    .Select(e => e.Item1)
+                    .OrderByDescending(move => move.Score)];
+                break;
+            default:
+                bestMoves = [.. _moves
+                    .Select(move => move.Value)
+                    .Take(5)];
+                break;
+        }
 
-        groups = bestMoves
+        groups = [.. bestMoves
             .OrderByDescending(move => move.Score)
             .GroupBy(move => move.FirstMove[..2])
             .Select(group => group.ToArray())
-            .OrderByDescending(list => list.First().Score)
-            .ToArray();
+            .OrderByDescending(list => list.First().Score)];
 
         foreach (var group in groups) {
             var bestMove = group.First();
@@ -260,7 +307,7 @@ public partial class MainWindow
         }
     }
 
-    private string GetArrowOpponent(int index, IReadOnlyDictionary<int, Move> moves)
+    private string GetArrowOpponent(int index, SortedList<int, Move> moves)
     {
         var move = moves[index];
         var diff = move.Score - moves[0].Score;
@@ -369,10 +416,6 @@ public partial class MainWindow
         }}
         div.innerHTML = `{layer}`;
     }}
-    window._arrowClickHandler = function() {{
-        removeArrow();
-        window._disableArrowObserver = true;
-    }};
     setTimeout(function(){{
         window._disableArrowObserver = false;
         window._chessBoardObserver = new MutationObserver(function(mutations){{

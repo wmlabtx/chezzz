@@ -23,6 +23,7 @@ public partial class MainWindow
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
 
         UpdateRequiredTime();
+        UpdateStrategy();
 
         GotoPlatform();
 
@@ -142,7 +143,7 @@ public partial class MainWindow
         var opponentDone = false;
 
         _moves.Clear();
-        SortedList<int, Move> opponentMoves = new();
+        SortedList<int, Move> opponentMoves = [];
         _selectedIndex = -1;
         _opponentArrow = string.Empty;
 
@@ -214,7 +215,7 @@ public partial class MainWindow
                 }
             }
 
-            await inputWriter[1].WriteLineAsync($"go movetime {requiredTime}");
+            await inputWriter[1].WriteLineAsync($"go movetime {requiredTime} searchmoves {previousMove}");
             await inputWriter[1].FlushAsync();
         }
         else {
@@ -229,7 +230,7 @@ public partial class MainWindow
                         opponentDone = true;
                     }
                     else {
-                        if (line.IndexOf(" multipv ", StringComparison.Ordinal) >= 0) {
+                        if (line.Contains(" multipv ")) {
                             var move = GetMove(line, board);
                             if (opponentMoves.Count > 0 && move.Depth > opponentMoves.Values[0].Depth) {
                                 var index = -1;
@@ -259,7 +260,7 @@ public partial class MainWindow
                     }
                     else {
                         _status?.Report(line);
-                        if (line.IndexOf(" multipv ", StringComparison.Ordinal) >= 0) {
+                        if (line.Contains(" multipv ")) {
                             var move = GetMove(line, board);
                             if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
                                 ShowMoves();
@@ -290,7 +291,7 @@ public partial class MainWindow
                 break;
             }
 
-            var pos = newFen.IndexOf(" ", StringComparison.Ordinal);
+            var pos = newFen.IndexOf(' ');
             if (pos > 0) {
                 newFen = newFen[..pos];
             }
@@ -320,6 +321,21 @@ public partial class MainWindow
     {
         _requiredTime.ChangeValue(delta);
         UpdateRequiredTime();
+    }
+
+    private void ChangeStrategy()
+    {
+        _strategy = _strategy switch {
+            'w' => 'd',
+            'd' => 'l',
+            'l' => 'w',
+            _ => _strategy
+        };
+
+        Properties.Settings.Default.Strategy = _strategy.ToString();
+        Properties.Settings.Default.Save();
+        UpdateStrategy();
+        ShowMoves();
     }
 
     private static List<string> ParseCsvLine(string line)
@@ -372,14 +388,14 @@ public partial class MainWindow
 
         _status.Report("Reading named book moves...");
 
-        var zipBytes = await File.ReadAllBytesAsync(bookPath);
+        var zipBytes = await File.ReadAllBytesAsync(bookPath).ConfigureAwait(false);
         using var zipStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
         var entry = archive.GetEntry("openings.csv");
         if (entry != null) {
-            await using var entryStream = entry.Open();
+            using var entryStream = entry.Open();
             using var reader = new StreamReader(entryStream);
-            var text = await reader.ReadToEndAsync();
+            var text = await reader.ReadToEndAsync().ConfigureAwait(false);
             var lines = text.Split("\r\n");
             foreach (var line in lines) {
                 var fields = ParseCsvLine(line);

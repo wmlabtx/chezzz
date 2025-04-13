@@ -10,6 +10,12 @@ public partial class MainWindow
     [GeneratedRegex(@"<div\s+class=""cg-wrap\s+orientation-(?<orientation>\w+)\s+manipulable""><cg-container\s+style=""width:\s*(?<width>\d+)px;\s*height:\s*(?<height>\d+)px;"">", RegexOptions.IgnoreCase, "en-US")]
     private static partial Regex OrientationRegex();
 
+    [GeneratedRegex(@"<kwdb[^>]*>(.*?)<\/kwdb>")]
+    private static partial Regex KwDbRegex();
+    
+    [GeneratedRegex(@"<span class=""node-highlight-content offset-for-annotation-icon(?:\s+selected)?"">(?:<span.*?data-figurine=""([^""]+)""></span>)?\s*([^<]+)</span>")]
+    private static partial Regex DataFigurineRegex();
+
     private static bool ProcessSanMoves(IReadOnlyList<string> sanmoves, out Chess.ChessBoard sanBoard, out string previousFen, out string previousMove, out string currentFen)
     {
         previousFen = string.Empty;
@@ -64,9 +70,7 @@ public partial class MainWindow
         // <span class="node-highlight-content offset-for-annotation-icon"><span class="icon-font-chess rook-white " data-figurine="R"></span> xf6 </span></div>
         // <span class="node-highlight-content offset-for-annotation-icon selected">b1=Q+ </span></div>
 
-        const string pattern = @"<span class=""node-highlight-content offset-for-annotation-icon(?:\s+selected)?"">(?:<span.*?data-figurine=""([^""]+)""></span>)?\s*([^<]+)</span>";
-
-        var matches = Regex.Matches(decodedHtml, pattern);
+        var matches = DataFigurineRegex().Matches(decodedHtml);
         foreach (var m in matches.Cast<Match>()) {
             var isSelected = m.Value.Contains("selected");
             var moveText = m.Groups[2].Value.Trim();
@@ -116,8 +120,7 @@ public partial class MainWindow
         }
 
         var sanmoves = new List<string>();
-        const string pattern = @"<kwdb[^>]*>(.*?)<\/kwdb>";
-        var simpleMoveListMatch = Regex.Matches(decodedHtml, pattern);
+        var simpleMoveListMatch = KwDbRegex().Matches(decodedHtml);
         foreach (Match match in simpleMoveListMatch) {
             if (match.Groups.Count > 1) {
                 var move = match.Groups[1].Value;
