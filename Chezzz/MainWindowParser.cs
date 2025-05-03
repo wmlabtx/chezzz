@@ -49,8 +49,7 @@ public partial class MainWindow
         error = string.Empty;
         previousFen = string.Empty;
         previousMove = string.Empty;
-        currentFen = string.Empty;
-        _isWhite = true;
+        currentFen = board.ToFen();
         _isWhite = true;
         var match = ChessBoardRegex().Match(decodedHtml);
         if (match.Success) {

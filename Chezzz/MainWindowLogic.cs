@@ -111,7 +111,6 @@ public partial class MainWindow
         var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
         await File.WriteAllTextAsync(  Path.Combine(appDirectory, "decodedHtml.html"), decodedHtml);
 #endif
-
         var requiredTime = _requiredTime.GetValue();
         var error = string.Empty;
         var currentFen = string.Empty;

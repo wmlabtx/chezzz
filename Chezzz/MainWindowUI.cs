@@ -104,7 +104,10 @@ public partial class MainWindow
                 y1 = 100.0 - y1;
             }
 
-            sbSvg.Append($@"<circle id='{ARROW_PREFIX}-a{bst}' cx='{x1}' cy='{y1}' r='2' style='fill:transparent; stroke:none; stroke-width:0.5; cursor:pointer; pointer-events:auto;' />");
+            var sx1 = Math.Round(x1, 2).ToString(CultureInfo.InvariantCulture);
+            var sy1 = Math.Round(y1, 2).ToString(CultureInfo.InvariantCulture);
+
+            sbSvg.Append($@"<circle id='{ARROW_PREFIX}-a{bst}' cx='{sx1}' cy='{sy1}' r='2' style='fill:transparent; stroke:none; stroke-width:0.5; cursor:pointer; pointer-events:auto;' />");
             foreach (var move in group) {
                 var color = GetColor(move.Score);
                 var darkenColor = DarkenColor(color, 0.75);
@@ -117,8 +120,11 @@ public partial class MainWindow
                     y1 = 100.0 - y1;
                 }
 
-                sbSvg.Append($"<circle id='{ARROW_PREFIX}-a{bst}-c{src}' cx='{x1}' cy='{y1}' r='4' style='fill:rgb({darkenColor.R},{darkenColor.G},{darkenColor.B}); stroke:rgb({color.R},{color.G},{color.B}); stroke-width:1;' />");
-                sbSvg.AppendLine($"<text id='{ARROW_PREFIX}-a{bst}-t{src}' x='{x1}' y='{y1}' text-anchor='middle' alignment-baseline='middle' style='font-size:2.5; fill:rgb({color.R},{color.G},{color.B}); font-family:Impact;'>{move.ScoreText}</text>");
+                sx1 = Math.Round(x1, 2).ToString(CultureInfo.InvariantCulture);
+                sy1 = Math.Round(y1, 2).ToString(CultureInfo.InvariantCulture);
+
+                sbSvg.Append($"<circle id='{ARROW_PREFIX}-a{bst}-c{src}' cx='{sx1}' cy='{sy1}' r='4' style='fill:rgb({darkenColor.R},{darkenColor.G},{darkenColor.B}); stroke:rgb({color.R},{color.G},{color.B}); stroke-width:1;' />");
+                sbSvg.AppendLine($"<text id='{ARROW_PREFIX}-a{bst}-t{src}' x='{sx1}' y='{sy1}' text-anchor='middle' alignment-baseline='middle' style='font-size:2.5; fill:rgb({color.R},{color.G},{color.B}); font-family:Impact;'>{move.ScoreText}</text>");
 
                 sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-c{src} {{opacity:{OPACITY};display:block!important;}}");
                 sbStyle.Append($"#{ARROW_PREFIX}-a{bst}:hover ~ #{ARROW_PREFIX}-a{bst}-t{src} {{opacity:{OPACITY};display:block!important;}}");
