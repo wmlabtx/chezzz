@@ -37,13 +37,13 @@ namespace Chezzz.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("w")]
-        public string Strategy {
+        [global::System.Configuration.DefaultSettingValueAttribute("50")]
+        public int RequiredScore {
             get {
-                return ((string)(this["Strategy"]));
+                return ((int)(this["RequiredScore"]));
             }
             set {
-                this["Strategy"] = value;
+                this["RequiredScore"] = value;
             }
         }
     }

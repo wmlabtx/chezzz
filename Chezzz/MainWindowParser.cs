@@ -13,10 +13,10 @@ public partial class MainWindow
     [GeneratedRegex(@"<kwdb[^>]*>(.*?)<\/kwdb>")]
     private static partial Regex KwDbRegex();
     
-    [GeneratedRegex(@"<span class=""node-highlight-content offset-for-annotation-icon(?:\s+selected)?"">(?:<span.*?data-figurine=""([^""]+)""></span>)?\s*([^<]+)</span>")]
+    [GeneratedRegex(@"<span class=""node-highlight-content offset-for-annotation-icon(?:\s+selected)?"">(?:<span.*?data-figurine=""([^""]+)""></span>)?\s*([^<]+)<")]
     private static partial Regex DataFigurineRegex();
 
-    private static bool ProcessSanMoves(IReadOnlyList<string> sanmoves, out Chess.ChessBoard sanBoard, out string previousFen, out string previousMove, out string currentFen)
+    private static bool ProcessSanMoves(List<string> sanmoves, out Chess.ChessBoard sanBoard, out string previousFen, out string previousMove, out string currentFen)
     {
         previousFen = string.Empty;
         previousMove = string.Empty;
@@ -68,6 +68,8 @@ public partial class MainWindow
         // <span class="node-highlight-content offset-for-annotation-icon">d4 </span></div>
         // <span class="node-highlight-content offset-for-annotation-icon"><span class="icon-font-chess rook-white " data-figurine="R"></span> xf6 </span></div>
         // <span class="node-highlight-content offset-for-annotation-icon selected">b1=Q+ </span></div>
+        // <span class="node-highlight-content offset-for-annotation-icon">hxg6 <div class="move-info-icon" data-tooltip="En passant is a special pawn move by which a pawn captures another pawn that has advanced two squares." style="--tooltip-top:1px"><span class="icon-font-chess circle-info"></span></div>
+        // "Qd1+<draw title=\"Draw offer\">½?</draw>"
 
         var matches = DataFigurineRegex().Matches(decodedHtml);
         foreach (var m in matches.Cast<Match>()) {
@@ -75,6 +77,11 @@ public partial class MainWindow
             var moveText = m.Groups[2].Value.Trim();
             var figurine = m.Groups[1].Success ? m.Groups[1].Value : "";
             var completeMove = !string.IsNullOrEmpty(figurine) ? figurine + moveText : moveText;
+            int index = completeMove.IndexOf('<');
+            if (index > 0) {
+                completeMove = completeMove[..index].Trim();
+            }
+
             sanmoves.Add(completeMove);
             if (isSelected) {
                 break;
@@ -108,11 +115,11 @@ public partial class MainWindow
         }
 
         var orientation = m.Groups["orientation"].Value;
-        if (orientation.Equals("black")) {
+        if (orientation.Equals("black", StringComparison.Ordinal)) {
             _isWhite = false;
         }
         else {
-            if (!orientation.Equals("white")) {
+            if (!orientation.Equals("white", StringComparison.Ordinal)) {
                 error = $"Unknown orientation '{orientation}'";
                 return;
             }

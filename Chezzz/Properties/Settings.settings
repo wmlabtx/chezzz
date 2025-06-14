@@ -5,8 +5,8 @@
     <Setting Name="RequiredTime" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1000</Value>
     </Setting>
-    <Setting Name="Strategy" Type="System.String" Scope="User">
-      <Value Profile="(Default)">w</Value>
+    <Setting Name="RequiredScore" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">50</Value>
     </Setting>
   </Settings>
 </SettingsFile>

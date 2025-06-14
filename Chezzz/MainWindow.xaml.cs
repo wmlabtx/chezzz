@@ -17,21 +17,19 @@ public partial class MainWindow
     private bool _isWhite;
     private string _chessBoardTag;
 
-    private readonly SortedList<int, Move> _moves = [];
-    private int _selectedIndex;
+    private readonly Models.Moves _moves = new();
+    private readonly Models.Moves _opponentMoves = new();
 
     private string _svg;
     private string _style;
     private string _opponentArrow;
 
-    private const string OPACITY = "0.7";
+    private Models.Score? _currentScore = null;
 
     private readonly IntSetting _requiredTime;
-    private char _strategy = 'w';
+    private readonly IntSetting _requiredScore;
 
     private readonly SortedDictionary<string, string> _openings = [];
-
-    private const string ARROW_PREFIX = "chezzz";
 
     public MainWindow()
     {
@@ -45,10 +43,15 @@ public partial class MainWindow
                 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000
             ]);
 
-        _strategy = Settings.Default.Strategy[0];
-        if (_strategy != 'w' && _strategy != 'd' && _strategy != 'l') {
-            _strategy = 'w';
-        }
+        _requiredScore = new IntSetting(
+            nameof(Settings.Default.RequiredScore),
+            [
+                NEGATIVE_MATE,
+                -750, -500, -450, -400, -350, -300, -250, -200, -150, -100, -75, -50, -25,
+                0,
+                25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 750,
+                POSITIVE_MATE
+            ]);
 
         _status = new Progress<string>(message => Status.Text = message);
         _stockfishPath = ConfigurationManager.AppSettings["StockFishPath"];
@@ -57,6 +60,10 @@ public partial class MainWindow
         }
         else if (!File.Exists(_stockfishPath)) {
             _status.Report($"{_stockfishPath} not found");
+        }
+
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362)) {
+            _status.Report("WebBrowser is only supported on Windows 10.0.18362 and later");
         }
 
         _svg = string.Empty;
@@ -98,6 +105,16 @@ public partial class MainWindow
         await WindowLoadedAsync();
     }
 
+    private void DecreaseScore_OnClick(object sender, RoutedEventArgs e)
+    {
+        ChangeRequiredScore(-1);
+    }
+
+    private void IncreaseScore_OnClick(object sender, RoutedEventArgs e)
+    {
+        ChangeRequiredScore(+1);
+    }
+
     private void DecreaseTime_OnClick(object sender, RoutedEventArgs e)
     {
         ChangeRequiredTime(-1);
@@ -106,11 +123,6 @@ public partial class MainWindow
     private void IncreaseTime_OnClick(object sender, RoutedEventArgs e)
     {
         ChangeRequiredTime(+1);
-    }
-
-    private void Strategy_OnClick(object sender, RoutedEventArgs e)
-    {
-        ChangeStrategy();
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

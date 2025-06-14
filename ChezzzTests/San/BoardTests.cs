@@ -1,4 +1,5 @@
 ﻿using Chess;
+using System.Diagnostics;
 
 namespace ChezzzTests.San;
 
@@ -7,9 +8,7 @@ public class BoardTests
 {
     private static string[] GetMoves(string pgn)
     {
-        return pgn.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(move => !move.Contains('.'))
-            .ToArray();
+        return [.. pgn.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(move => !move.Contains('.'))];
     }
 
     [TestMethod]
@@ -46,8 +45,8 @@ public class BoardTests
             "20. Bxf6 Qe4+ 21. f3 Qg6+ 22. Kf2 Qxf6 23. Rg1 Qh4+ 24. Kf1 Qxh2 25. Qe2 Qh3+ 26. Ke1 Qh4+ 27. Kd2 Qf6 28. f4 O-O-O 29. Rg2 Rxd6 " +
             "30. Rbg1 d4 31. Rg6 dxc3+ 32. Ke1 cxb2 33. Rxf6 b1=Q+ 34. Kf2 Rg8 35. Rxg8+",
 
-            "1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 g6 5. Nc3 Bg7 6. Be3 Nf6 7. Bc4 O-O 8. O-O Ne5 9. Bb3 Neg4 " + 
-            "10. Bg5 h6 11. Bxf6 Nxf6 12. Qf3 e5 13. Ndb5 d6 14. Nd5 a6 15. Nbc3 Bg4 16. Qg3 Rb8 17. Nxf6+ Bxf6 18. Qxg4 b5 19. Ne2 Qc7 " + 
+            "1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 g6 5. Nc3 Bg7 6. Be3 Nf6 7. Bc4 O-O 8. O-O Ne5 9. Bb3 Neg4 " +
+            "10. Bg5 h6 11. Bxf6 Nxf6 12. Qf3 e5 13. Ndb5 d6 14. Nd5 a6 15. Nbc3 Bg4 16. Qg3 Rb8 17. Nxf6+ Bxf6 18. Qxg4 b5 19. Ne2 Qc7 " +
             "20. Rac1 Bg5 21. f4 Qc8 22. Qxc8 Rbxc8 23. fxg5 hxg5 24. Rxf7 Rxf7 25. Rf1 Rf8"
         };
 
@@ -74,5 +73,33 @@ public class BoardTests
 
             Assert.AreEqual(expectedFen, fen, $"Game {i + 1} final position does not match expected FEN");
         }
+    }
+
+    [TestMethod]
+    public void TestEnPassant()
+    {
+        var moves = new[] { "f4", "c5", "Nc3", "Nc6", "d3", "Nf6", "e4", "d5", "e5", "Ng4", "Nce2", "f5", "b3", "d4", "h3", "Nh6",
+            "c4", "Qa5+", "Bd2", "Nb4", "Bxb4", "Qxb4+", "Kf2", "Be6", "Nc1", "O-O-O", "a4", "Nf7", "h4", "a5", "Nf3", "h6", "Be2",
+            "Bd7", "Na2", "Qb6", "h5", "e6", "Qc2", "Be7", "Nh4", "Bxh4+", "Rxh4", "Rdg8", "Rg1", "g5" };
+        var board = new ChessBoard();
+        var fen = string.Empty;
+        for (var j = 0; j < moves.Length; j++) {
+            var move = moves[j];
+            Assert.IsTrue(board.Move(move), $"Move {j + 1} ({move}) should be valid");
+            fen = board.ToFen();
+            Debug.WriteLine($"Move {j + 1}: {move} -> {fen}");
+        }
+
+        Assert.AreEqual("2k3rr/1p1b1n2/1q2p2p/p1p1PppP/P1Pp1P1R/1P1P4/N1Q1BKP1/6R1 w - g6 0 24", fen, $"does not match expected FEN");
+        
+        var m = "hxg6";
+        Assert.IsTrue(board.Move(m), $"Move {m} should be valid");
+        fen = board.ToFen();
+        Assert.AreEqual("2k3rr/1p1b1n2/1q2p1Pp/p1p1Pp2/P1Pp1P1R/1P1P4/N1Q1BKP1/6R1 b - - 0 24", fen, $"Move {m} does not match expected FEN");
+
+        m = "Rxg6";
+        Assert.IsTrue(board.Move(m), $"Move {m} should be valid");
+        fen = board.ToFen();
+        Assert.AreEqual("2k4r/1p1b1n2/1q2p1rp/p1p1Pp2/P1Pp1P1R/1P1P4/N1Q1BKP1/6R1 w - - 0 25", fen, $"Move {m} does not match expected FEN");
     }
 }

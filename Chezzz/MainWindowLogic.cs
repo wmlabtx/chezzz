@@ -23,7 +23,7 @@ public partial class MainWindow
         Top = SystemParameters.WorkArea.Top + (SystemParameters.WorkArea.Height - margin - Height) / 2;
 
         UpdateRequiredTime();
-        UpdateStrategy();
+        UpdateRequiredScore();
 
         GotoPlatform();
 
@@ -45,39 +45,33 @@ public partial class MainWindow
         Advice.IsEnabled = true;
     }
 
-    private static Move GetMove(string rawline, ChessBoard board)
+    private static Models.Move GetMove(string rawline, ChessBoard board)
     {
-        var move = new Move();
+        var move = new Models.Move();
         var parts = rawline.Split(' ');
         for (var i = 0; i < parts.Length; i++) {
             switch (parts[i]) {
                 case "multipv":
-                    move.Index = int.Parse(parts[i + 1]) - 1;
+                    move.Index = int.Parse(parts[i + 1], System.Globalization.CultureInfo.InvariantCulture) - 1;
                     break;
                 case "mate":
-                    move.Score = parts[i + 1].StartsWith('-') ? NEGATIVE_MATE : POSITIVE_MATE;
-                    var mateScore = 20 - Math.Min(20, Math.Abs(int.Parse(parts[i + 1])));
-                    if (move.Score > 0) {
-                        move.Score += mateScore;
-                    }
-                    else {
-                        move.Score -= mateScore;
-                    }
-
-                    move.ScoreText = parts[i + 1].StartsWith('-') ? $"-M{parts[i + 1][1..]}" : $"+M{parts[i + 1]}";
+                    var mateScore = int.Parse(parts[i + 1], System.Globalization.CultureInfo.InvariantCulture);
+                    var score = new Models.Score(mateScore, true);
+                    move.Score = score;
                     break;
                 case "cp":
-                    move.Score = int.Parse(parts[i + 1]);
-                    move.ScoreText = move.Score < 0 ? $"-{Math.Abs(move.Score) / 100.0:F2}" : $"+{move.Score / 100.0:F2}";
+                    var moveScore = int.Parse(parts[i + 1], System.Globalization.CultureInfo.InvariantCulture);
+                    score = new Models.Score(moveScore, false);
+                    move.Score = score;
                     break;
                 case "depth":
-                    move.Depth = int.Parse(parts[i + 1]);
+                    move.Depth = int.Parse(parts[i + 1], System.Globalization.CultureInfo.InvariantCulture);
                     break;
                 case "wdl":
                     var wdl = new int[3];
-                    wdl[0] = int.Parse(parts[i + 1]);
-                    wdl[1] = int.Parse(parts[i + 2]);
-                    wdl[2] = int.Parse(parts[i + 3]);
+                    wdl[0] = int.Parse(parts[i + 1], System.Globalization.CultureInfo.InvariantCulture);
+                    wdl[1] = int.Parse(parts[i + 2], System.Globalization.CultureInfo.InvariantCulture);
+                    wdl[2] = int.Parse(parts[i + 3], System.Globalization.CultureInfo.InvariantCulture);
                     var iwdl = Array.IndexOf(wdl, wdl.Max());
                     var twdl = iwdl switch {
                         0 => "win",
@@ -109,7 +103,7 @@ public partial class MainWindow
         var decodedHtml = Regex.Unescape(result.Trim('"'));
 #if DEBUG
         var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        await File.WriteAllTextAsync(  Path.Combine(appDirectory, "decodedHtml.html"), decodedHtml);
+        await File.WriteAllTextAsync(Path.Combine(appDirectory, "decodedHtml.html"), decodedHtml);
 #endif
         var requiredTime = _requiredTime.GetValue();
         var error = string.Empty;
@@ -142,9 +136,9 @@ public partial class MainWindow
         var opponentDone = false;
 
         _moves.Clear();
-        SortedList<int, Move> opponentMoves = [];
-        _selectedIndex = -1;
+        _opponentMoves.Clear();
         _opponentArrow = string.Empty;
+        _currentScore = null;
 
         for (var i = 0; i < 2; i++) {
             stockfish[i] = new Process {
@@ -165,7 +159,7 @@ public partial class MainWindow
             await inputWriter[i].FlushAsync();
 
             while (await outputReader[i].ReadLineAsync() is { } line) {
-                if (line.StartsWith("uciok"))
+                if (line.StartsWith("uciok", StringComparison.Ordinal))
                     break;
             }
 
@@ -193,7 +187,7 @@ public partial class MainWindow
 
         
         while (await outputReader[0].ReadLineAsync() is { } rawline ) {
-            if (rawline.StartsWith("readyok")) {
+            if (rawline.StartsWith("readyok", StringComparison.Ordinal)) {
                 break;
             }
         }
@@ -209,12 +203,12 @@ public partial class MainWindow
             await inputWriter[1].FlushAsync();
 
             while (await outputReader[1].ReadLineAsync() is { } rawline) {
-                if (rawline.StartsWith("readyok")) {
+                if (rawline.StartsWith("readyok", StringComparison.Ordinal)) {
                     break;
                 }
             }
 
-            await inputWriter[1].WriteLineAsync($"go movetime {requiredTime} searchmoves {previousMove}");
+            await inputWriter[1].WriteLineAsync($"go movetime {requiredTime}");
             await inputWriter[1].FlushAsync();
         }
         else {
@@ -225,27 +219,20 @@ public partial class MainWindow
             if (!opponentDone) {
                 var line = await outputReader[1].ReadLineAsync();
                 if (line is not null) {
-                    if (line.StartsWith("bestmove")) {
+                    if (line.StartsWith("bestmove", StringComparison.Ordinal)) {
                         opponentDone = true;
                     }
                     else {
                         if (line.Contains(" multipv ")) {
                             var move = GetMove(line, board);
-                            if (opponentMoves.Count > 0 && move.Depth > opponentMoves.Values[0].Depth) {
-                                var index = -1;
-                                foreach (var m in opponentMoves) {
-                                    if (m.Value.FirstMove[..4].Equals(previousMove[..4])) {
-                                        index = m.Key;
-                                        break;
-                                    }
-                                }
-
-                                _opponentArrow = GetArrowOpponent(index, opponentMoves);
+                            if (_opponentMoves.GetCount() > 0 && move.Depth > _opponentMoves.GetDepth()) {
+                                _currentScore = _opponentMoves.GetScoreOpponent();
+                                _opponentArrow = _opponentMoves.GetArrowOpponent(previousMove, _isWhite);
                                 await AddArrowPlayer();
-                                opponentMoves.Clear();
+                                _opponentMoves.Clear();
                             }
 
-                            opponentMoves[move.Index] = move;
+                            _opponentMoves.Add(move);
                         }
                     }
                 }
@@ -254,26 +241,27 @@ public partial class MainWindow
             if (!playerDone) {
                 var line = await outputReader[0].ReadLineAsync();
                 if (line is not null) {
-                    if (line.StartsWith("bestmove")) {
+                    if (line.StartsWith("bestmove", StringComparison.Ordinal)) {
                         playerDone = true;
                     }
                     else {
                         _status?.Report(line);
                         if (line.Contains(" multipv ")) {
                             var move = GetMove(line, board);
-                            if (_moves.Count > 0 && move.Depth > _moves.Values[0].Depth) {
-                                ShowMoves();
+                            if (_moves.GetCount() > 0 && move.Depth > _moves.GetDepth()) {
                                 _moves.Clear();
                             }
 
-                            _moves[move.Index] = move;
+                            _moves.Add(move);
                         }
                     }
                 }
             }
         }
 
-        foreach (var move in _moves.Values) {
+        _currentScore ??= _moves.GetScore();
+
+        foreach (var move in _moves.GetMoves()) {
             await inputWriter[0].WriteLineAsync($"position fen {currentFen} moves {move.FirstMove}");
             await inputWriter[0].FlushAsync();
 
@@ -282,7 +270,7 @@ public partial class MainWindow
 
             var newFen = string.Empty;
             while (await outputReader[0].ReadLineAsync() is { } rawline) {
-                if (!rawline.StartsWith("Fen:")) {
+                if (!rawline.StartsWith("Fen:", StringComparison.Ordinal)) {
                     continue;
                 }
 
@@ -302,7 +290,7 @@ public partial class MainWindow
             }
         }
 
-        ShowMoves();
+        ShowMoves(true);
         await AddArrowPlayer();
 
         for (var i = 0; i < 2; i++) {
@@ -313,28 +301,20 @@ public partial class MainWindow
             stockfish[i].Close();
         }
 
-        _status?.Report($"Done. The best move: {_moves[0].FirstPiece}{_moves[0].FirstMove}; score: {_moves[0].ScoreText} (depth: {_moves[0].Depth})");
+        var bestMove = _moves.GetFirstMove();
+        _status?.Report($"Done. The best move: {bestMove.FirstPiece}{bestMove.FirstMove}; score: {bestMove.Score} (depth: {bestMove.Depth})");
+    }
+
+    private void ChangeRequiredScore(int delta)
+    {
+        _requiredScore.ChangeValue(delta);
+        UpdateRequiredScore();
     }
 
     private void ChangeRequiredTime(int delta)
     {
         _requiredTime.ChangeValue(delta);
         UpdateRequiredTime();
-    }
-
-    private void ChangeStrategy()
-    {
-        _strategy = _strategy switch {
-            'w' => 'd',
-            'd' => 'l',
-            'l' => 'w',
-            _ => _strategy
-        };
-
-        Properties.Settings.Default.Strategy = _strategy.ToString();
-        Properties.Settings.Default.Save();
-        UpdateStrategy();
-        ShowMoves();
     }
 
     private static List<string> ParseCsvLine(string line)

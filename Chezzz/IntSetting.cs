@@ -3,21 +3,15 @@ using System.Configuration;
 
 namespace Chezzz;
 
-public class IntSetting
+public class IntSetting(string settingName, IEnumerable<int> allowedValues)
 {
-    private readonly string _settingName;
-    private readonly int[] _allowedValues;
-
-    public IntSetting(string settingName, IEnumerable<int> allowedValues)
-    {
-        _settingName = settingName;
-        _allowedValues = allowedValues.OrderBy(v => v).ToArray();
-    }
+    private readonly string _settingName = settingName;
+    private readonly int[] _allowedValues = [.. allowedValues.OrderBy(v => v)];
 
     public int GetValue()
     {
         try {
-            var value = Convert.ToInt32(Settings.Default[_settingName]);
+            var value = Convert.ToInt32(Settings.Default[_settingName], System.Globalization.CultureInfo.InvariantCulture);
             return Array.BinarySearch(_allowedValues, value) >= 0 ? value : FindClosestAllowedValue(value);
         }
         catch (Exception) {
@@ -73,7 +67,7 @@ public class IntSetting
             if (propertyInfo != null) {
                 if (propertyInfo.GetCustomAttributes(typeof(DefaultSettingValueAttribute), false)
                         .FirstOrDefault() is DefaultSettingValueAttribute attribute) {
-                    return Convert.ToInt32(attribute.Value);
+                    return Convert.ToInt32(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
                 }
             }
 
