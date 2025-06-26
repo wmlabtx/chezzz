@@ -58,7 +58,7 @@ public class Score(int value, bool isMate) : IComparable<Score>
     {
         var diff = 0;
         if (s1.IsMate && s1.Value >= 0 && s2.IsMate && s2.Value >= 0) {
-            diff = s2.Value - s1.Value;
+            diff = (s2.Value - s1.Value)  * 100;
         }
         else if (s1.IsMate && s1.Value >= 0 && !s2.IsMate) {
             diff = 10000;
@@ -84,7 +84,7 @@ public class Score(int value, bool isMate) : IComparable<Score>
             diff = -10000;
         }
         else if (s1.IsMate && s1.Value < 0 && s2.IsMate && s2.Value < 0) {
-            diff = s2.Value - s1.Value;
+            diff = (s2.Value - s1.Value) * 100;
         }
 
         return new Score(diff, false);

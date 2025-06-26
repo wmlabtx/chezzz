@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Move = Chezzz.Models.Move;
 
 namespace Chezzz;
 
@@ -58,11 +59,22 @@ public partial class MainWindow
             _ => new Score(requiredScoreValue, false),
         };
 
-         var betterMoves = new List<Move>();
+        var medianScore = requiredScore;
+        if (!requiredScore.IsMate && !_currentScore.IsMate) {
+            medianScore = new Score((requiredScoreValue + _currentScore.Value) / 2, false);
+        }
+
+        var betterMoves = new List<Move>();
         var equialMoves = new List<Move>();
         var worseMoves = new List<Move>();
-        foreach (var move in _moves.GetMoves()) {
-            var diff = (move.Score - _currentScore! - requiredScore).Value;
+
+        var moves = new List<Move>(_moves.GetMoves().Where(e => !string.IsNullOrEmpty(e.Opening)));
+        if (moves.Count == 0) {
+            moves = [.. _moves.GetMoves()];
+        }
+
+        foreach (var move in moves) {
+            var diff = (move.Score - medianScore).Value;
             if (diff > 0) {
                 betterMoves.Add(move);
             }
@@ -76,21 +88,15 @@ public partial class MainWindow
 
         betterMoves.Reverse();
 
-        while (bestMoves.Count < 3 && (betterMoves.Count > 0 || equialMoves.Count > 0 || worseMoves.Count > 0)) {
-            if (bestMoves.Count < 3 && equialMoves.Count > 0) {
-                bestMoves.Add(equialMoves[0]);
-                equialMoves.RemoveAt(0);
-            }
+        bestMoves.AddRange(equialMoves.Take(1));
+        if (bestMoves.Count < 1 && betterMoves.Count > 0) {
+            bestMoves.Add(betterMoves[0]);
+            betterMoves.RemoveAt(0);
+        }
 
-            if (bestMoves.Count < 3 && betterMoves.Count > 0) {
-                bestMoves.Add(betterMoves[0]);
-                betterMoves.RemoveAt(0);
-            }
-
-            if (bestMoves.Count < 3 && worseMoves.Count > 0) {
-                bestMoves.Add(worseMoves[0]);
-                worseMoves.RemoveAt(0);
-            }
+        if (bestMoves.Count < 1 && worseMoves.Count > 0) {
+            bestMoves.Add(worseMoves[0]);
+            worseMoves.RemoveAt(0);
         }
 
         var moveScore = new Move {
